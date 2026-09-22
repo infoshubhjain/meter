@@ -148,8 +148,8 @@ def test_pricing() -> None:
     cost, _, _ = price(Usage(input_tokens=1_000_000), "gpt-4o-2024-11-20")
     check("dated snapshots resolve to their base model", cost == 2.50, f"got {cost}")
 
-    # Sonnet 5 is on introductory pricing ($2/$10) until 2026-08-31, so its cache
-    # tiers are 0.1x and 1.25x of $2, not of the standard $3.
+    # Anthropic kept Sonnet 5 at $2/$10 after its introductory period, so its cache
+    # tiers remain 0.1x and 1.25x of $2.
     cost, _, _ = price(Usage(cache_read_tokens=1_000_000), "claude-sonnet-5")
     check("anthropic cache reads priced at 0.1x input", cost == 0.20, f"got {cost}")
 

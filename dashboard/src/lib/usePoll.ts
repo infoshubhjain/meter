@@ -27,6 +27,8 @@ import { useEffect, useRef, useState } from "react";
  * Result: an abandoned tab costs a few dozen requests instead of tens of thousands,
  * while an actively watched one is as live as it was before.
  */
+export type PollStatus = "live" | "paused" | "offline";
+
 export function usePoll<T>(
   url: string,
   initial: T,
@@ -35,9 +37,9 @@ export function usePoll<T>(
     maxIntervalMs = 30000,
     stopAfterIdleMs = 5 * 60 * 1000,
   }: { intervalMs?: number; maxIntervalMs?: number; stopAfterIdleMs?: number } = {},
-): { data: T; live: boolean } {
+): { data: T; status: PollStatus } {
   const [data, setData] = useState<T>(initial);
-  const [live, setLive] = useState(true);
+  const [status, setStatus] = useState<PollStatus>("live");
 
   // Refs, not state: these change on every tick and must not re-render the table.
   const delay = useRef(intervalMs);
@@ -54,7 +56,7 @@ export function usePoll<T>(
     const wake = () => {
       lastChange.current = Date.now();
       delay.current = intervalMs;
-      setLive(true);
+      setStatus("live");
       if (timer) clearTimeout(timer);
       void tick();
     };
@@ -70,13 +72,14 @@ export function usePoll<T>(
       }
 
       if (Date.now() - lastChange.current > stopAfterIdleMs) {
-        setLive(false);
+        setStatus("paused");
         return; // fully stopped until an interaction calls wake()
       }
 
       try {
         const res = await fetch(url, { cache: "no-store" });
         if (res.ok) {
+          if (!cancelled) setStatus("live");
           const body = await res.text();
           if (!cancelled && body !== lastPayload.current) {
             lastPayload.current = body;
@@ -87,10 +90,14 @@ export function usePoll<T>(
             // Nothing changed: ease out, but never past maxIntervalMs.
             delay.current = Math.min(delay.current * 1.5, maxIntervalMs);
           }
+        } else if (!cancelled) {
+          setStatus("offline");
+          delay.current = Math.min(delay.current * 2, maxIntervalMs);
         }
       } catch {
         // Transient failure. Keep the last good data rather than clearing the table,
         // and back off so a dead endpoint is not hammered.
+        if (!cancelled) setStatus("offline");
         delay.current = Math.min(delay.current * 2, maxIntervalMs);
       }
 
@@ -117,5 +124,5 @@ export function usePoll<T>(
     };
   }, [url, intervalMs, maxIntervalMs, stopAfterIdleMs]);
 
-  return { data, live };
+  return { data, status };
 }

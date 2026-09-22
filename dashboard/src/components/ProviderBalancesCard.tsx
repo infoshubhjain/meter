@@ -4,6 +4,7 @@ import {
   providerLabel,
   relativeTime,
   isStale,
+  WALLET_STALE_AFTER_MS,
 } from "@/lib/format";
 import { Panel } from "@/components/ui/primitives";
 
@@ -13,9 +14,6 @@ import { Panel } from "@/components/ui/primitives";
  * so this is the documented figure rather than a live setting.
  */
 const LOW_BALANCE_USD = 10;
-
-/** Anything older than this reads as stale — a balance's age changes what it means. */
-const STALE_AFTER_MS = 30 * 60 * 1000;
 
 const ICONS: Record<string, { bg: string; fg: string }> = {
   anthropic: { bg: "rgba(209,143,64,0.12)", fg: "#d18f40" },
@@ -60,7 +58,7 @@ export function ProviderBalancesCard({
         ) : (
           wallets.map((w) => {
             const low = w.balance_usd < LOW_BALANCE_USD;
-            const stale = isStale(w.updated_at, STALE_AFTER_MS);
+            const stale = isStale(w.updated_at, WALLET_STALE_AFTER_MS);
             const icon = ICONS[w.provider.toLowerCase()] ?? {
               bg: "rgba(255,255,255,0.06)",
               fg: "var(--color-text-secondary)",

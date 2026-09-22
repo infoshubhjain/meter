@@ -99,6 +99,36 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
 ## 6a. Current Status
 *(Keep this current — see `AGENTS.md` for the update policy. Update in the same turn as any scope or architecture decision, don't batch it for later.)*
 
+*   **Dependency/UI audit, 2026-09-22 (Shubh) — dashboard patched and clean.** Next.js
+    moved from `16.2.12` to `16.3.5`, closing the audit's critical RCE findings and
+    its transitive `postcss`/`sharp` findings; the lockfile also resolves the remaining
+    vulnerable `nanoid`. `npm run lint`, `npm run build`, `npm audit --omit=dev`,
+    `ruff check .`, `pip-audit -r requirements.txt`, and Python byte-compilation pass.
+    All backend suites now pass against a fresh temporary Postgres 16 cluster — **985 checks**
+    (proxy 306, predictor 140, treasury 253, alerts 52, judge 234). The local dashboard
+    visual pass also found that the shared `.glass-pill` display rule overrode Tailwind's
+    mobile `hidden` utility, clipping the breaker pill; the predictor explainer link now
+    hides below 640px and the nav has no horizontal overflow at 390px. A balance older than the
+    shared 30-minute threshold now also renders as a warning in the summary card, matching the
+    detailed balance panel. The judge-session form now uses native required/email validation
+    before it calls the proxy and announces returned errors to assistive technology. The two
+    polling panels now change their live indicator to `Paused` when `usePoll` deliberately
+    stops after inactivity, rather than claiming they are still streaming; the shared hook
+    also now reports endpoint failures as `Offline` while retaining the last good rows and
+    retrying with backoff. Dashboard and homepage section navigation now exposes its current
+    location to assistive technology, and the dashboard stylesheet now gives keyboard focus a
+    visible shared ring (including the judge inputs that intentionally suppress the browser default).
+    `dashboard/README.md` is now a real operator guide instead of the stock Next.js template:
+    it records the read-only boundary, local setup, checks, and Vercel pooler choice.
+    The deployed Render
+    `/healthz` probe initially timed out while the free instance slept, then returned healthy
+    after waking with budget, breaker and predictor-refresh state. It also reports OpenAI
+    available but Anthropic unavailable; `PROPOSALS.md` C6 records the deployment verification
+    needed before claiming the public demo forwards both providers.
+    **Open documentation decision:** `PROPOSALS.md` A7 records that README's Compose quickstart
+    promises Postgres, Redis and dashboard services that the one-service Compose file does not
+    provide; do not silently pick a documentation story until the team decides it.
+
 *   **Security audit, 2026-08-03 (Shubh) — nine fixes shipped, three questions raised.**
     Full-codebase pass, every finding runtime-verified against a running proxy rather than
     read off the source. **Fixed:** the CORS preview regex was `https://.*\.vercel\.app`,
@@ -986,7 +1016,7 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
         sending anything, so credential problems never get confused with integration problems.
 
 *   **Resolved since kickoff:**
-    1.  ✅ **Pricing is verified** against Anthropic's and OpenAI's published rate cards (2026-08-01). The first draft was written from memory and was wrong in both directions. **One deadline attached:** Claude Sonnet 5 is on introductory pricing ($2/$10 per MTok) that expires **2026-08-31**, jumping 50% to $3/$15. On 2026-09-01, create `pricing/2026-09-01.yaml` — do *not* edit the existing file, or every historical row silently reprices. (`PROPOSALS.md` C1)
+    1.  ✅ **Pricing is verified** against Anthropic's and OpenAI's published rate cards (2026-08-01; Sonnet 5 rechecked 2026-09-22). The first draft was written from memory and was wrong in both directions. Anthropic cancelled the scheduled Sonnet 5 increase: its $2/$10 per-MTok rate is now standard, so `pricing/2026-08-01.yaml` remains the active version and must not be edited. A new dated pricing file is still required for an actual rate change. (`PROPOSALS.md` C1)
     2.  ✅ **Redis: not in the 48-hour build — Shubh, Phase 2. SHIPPED.** Reservations are built and in-process (`proxy/budget.py`). Redis is not what makes authorize/capture correct; serialization is, and with one proxy process an `asyncio.Lock` is an identical guarantee for none of the operational cost. Redis becomes load-bearing at proxy replica #2. (`PROPOSALS.md` A5)
     3.  ✅ **Budget enforcement is now owned — Shubh, Phase 2. SHIPPED.** `meter.yaml` loader plus a pre-flight ceiling check in the request path, project-level and per-feature. (`PROPOSALS.md` B7)
     4.  ✅ **`meter.yaml` vs. the database as source of truth — resolved by the loader's direction of travel.** The file is authoritative; it is projected into `projects`/`feature_budgets` at boot and nothing at runtime writes back, so the request path still reads a table without the file ever being second-hand. (`PROPOSALS.md` A6)

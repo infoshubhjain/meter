@@ -192,6 +192,9 @@ const RELATIVE = new Intl.RelativeTimeFormat("en-US", {
   style: "short",
 });
 
+/** A provider balance stops being operationally current after thirty minutes. */
+export const WALLET_STALE_AFTER_MS = 30 * 60 * 1000;
+
 export function relativeTime(iso: string): string {
   const then = Date.parse(iso);
   if (Number.isNaN(then)) return "";

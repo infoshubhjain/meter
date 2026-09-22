@@ -99,6 +99,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* The dashboard has its own stylesheet, so the marketing page's focus ring never
+   reaches these controls. Keep keyboard position visible on every interactive surface. */
+:where(a, button, input):focus-visible {
+  outline: 2px solid var(--color-accent-light);
+  outline-offset: 3px;
+}
+
 /* ════════════════════════════════════════════════════════════════
    BACKGROUND — an ambient network canvas under a dot texture. Fixed, inert.
    z: network 0 · dots 1 · vignette 3 · content 10 · nav 100
@@ -290,6 +297,15 @@ body {
 .glass-cta:hover {
   background: #fff;
   color: var(--color-canvas);
+}
+
+/* `.glass-pill` sets display after Tailwind's utilities, so `hidden sm:inline-flex`
+   cannot hide a pill at narrow widths. Keep the operational breaker state visible;
+   the explanatory route can return once the nav has room. */
+@media (max-width: 39.999rem) {
+  .dashboard-predictor-link {
+    display: none;
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -812,6 +828,10 @@ body {
 .judge-input:focus {
   outline: none;
   border-color: var(--color-accent);
+}
+.judge-input:focus-visible {
+  outline: 2px solid var(--color-accent-light);
+  outline-offset: 2px;
 }
 
 /* The console entry point. Loud on purpose: it is the only action on the dashboard,

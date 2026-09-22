@@ -169,7 +169,7 @@ export function AgentLog({
   // Polls only while the tab is visible, backs off when the feed stops changing, and
   // stops entirely once idle. See `usePoll` — an unconditional setInterval here was
   // 1,200 requests an hour from a tab nobody was looking at.
-  const { data } = usePoll<{ events: TreasuryEvent[] }>(
+  const { data, status } = usePoll<{ events: TreasuryEvent[] }>(
     "/api/treasury-events",
     { events: initialEvents },
     { intervalMs: POLL_INTERVAL_MS },
@@ -192,8 +192,16 @@ export function AgentLog({
       <Panel
         className="animate-in delay-4"
         title="Treasurer Agent"
-        tag={events.length > 0 ? "Streaming" : "Idle"}
-        live={events.length > 0}
+        tag={
+          events.length > 0
+            ? status === "live"
+              ? "Streaming"
+              : status === "paused"
+                ? "Paused"
+                : "Offline"
+            : "Idle"
+        }
+        live={events.length > 0 && status === "live"}
         bodyClassName="p-[20px]"
       >
         {lines.length === 0 ? (

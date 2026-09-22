@@ -67,6 +67,7 @@ export function TopNav({ breaker }: { breaker: BreakerState }) {
     // Full-bleed with a hairline rule, matching the homepage bar exactly, rather
     // than the floating inset card this used to be.
     <nav
+      aria-label="Dashboard sections"
       className="fixed left-0 right-0 top-0 z-[100] border-b border-border-subtle py-[12px]"
       style={{
         background: "rgba(8,8,12,0.6)",
@@ -89,7 +90,7 @@ export function TopNav({ breaker }: { breaker: BreakerState }) {
             "leave this page" rather than "jump down it". A judge who wants to
             know how the prediction is computed should not have to go back to
             the homepage to find the argument. */}
-        <Link href="/how-it-works" className="glass-pill hidden sm:inline-flex">
+        <Link href="/how-it-works" className="glass-pill dashboard-predictor-link">
           How the predictor works
         </Link>
 
@@ -100,6 +101,7 @@ export function TopNav({ breaker }: { breaker: BreakerState }) {
             <a
               key={link.href}
               href={link.href}
+              aria-current={active === link.href ? "location" : undefined}
               className={`glass-pill ${
                 active === link.href ? "glass-pill-active" : ""
               }`}

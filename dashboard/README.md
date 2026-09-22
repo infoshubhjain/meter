@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Meter dashboard
 
-## Getting Started
+Meter's Next.js 16 control room. It reads the same Postgres ledger the proxy writes,
+but never writes provider, wallet, budget, or request data itself.
 
-First, run the development server:
+## Run locally
 
 ```bash
+cd dashboard
+cp .env.example .env.local
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Set `DATABASE_URL` in `.env.local` to the Postgres database used by the proxy. Without
+it, the dashboard deliberately renders useful empty states instead of inventing data.
+Start the backend separately with `uvicorn proxy.app:app --port 8080 --reload` from the
+repository root.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Checks
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+npm audit --omit=dev
+```
 
-## Learn More
+## Deployment
 
-To learn more about Next.js, take a look at the following resources:
+Deploy this directory as the Vercel project root. Use Supabase's **transaction pooler**
+connection string for `DATABASE_URL`; the session pooler is for the long-lived proxy.
+The dashboard needs no provider, Prava, or Meter credentials. See the repository's
+[`DEPLOY.md`](../DEPLOY.md) for the complete backend/database/dashboard setup.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Boundaries
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `/dashboard` is the team-wide, read-only control room.
+- `/try` starts a short-lived, session-scoped judge walkthrough; actions still go through
+  the proxy rather than directly from the browser to the ledger.
+- Polling pauses after idle time and reports `Offline` while retaining the last successful
+  rows, so the UI does not claim that stale data is live.

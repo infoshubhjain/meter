@@ -14,7 +14,7 @@ another (the one you "fixed" may have been the correct one).
 
 Status key: **OPEN** — needs a decision · **RESOLVED / DONE / SHIPPED** — closed, kept for the record.
 
-33 items: A1–A6 (contradictions), B1–B18 (gaps), C1–C5 (verification), D1–D4 (research findings).
+39 items: A1–A7 (contradictions), B1–B22 (gaps), C1–C6 (verification), D1–D4 (research findings).
 
 ---
 
@@ -211,6 +211,22 @@ row, which is precisely the failure budget-as-code exists to prevent, and it wou
 invisible because the file no longer mentions it. `replace_budgets` clears every ceiling
 and rebuilds from the file in one transaction, so what the file says is what is enforced,
 including when the file says nothing.
+
+### A7 — Quickstart promises a local stack that Compose does not run · **OPEN — found 2026-09-22**
+
+| Source | Says |
+| --- | --- |
+| `README.md` Deployment | `docker compose up` starts proxy, worker, Postgres, Redis, and dashboard. |
+| `compose.yaml` / `CONTEXT.md` §6a | One `meter` backend service only; `DATABASE_URL` must name an external Postgres, Redis is intentionally absent, and the dashboard runs separately. |
+
+The quickstart cannot succeed as written on a fresh checkout: the service refuses to boot without
+`DATABASE_URL`, and a reader expecting a dashboard on a Compose port will not get one. This is
+especially damaging because it is the first command the README gives a prospective user.
+
+**Recommendation:** choose one explicit product story: either add owned local Postgres and dashboard
+services to Compose, or change the README quickstart to require an external Postgres and document
+the separate dashboard command. The current single-service implementation matches the latter with
+the least code, but a human should approve it before source-of-truth docs are changed.
 
 ---
 
@@ -1014,6 +1030,18 @@ fail with 2008 until that number has messaged the sending line once.
 number (or confirm with the Linq token whether the account is sandbox). One sentence in
 CONTEXT.md §6a records the gotcha; this item closes when someone has verified which mode
 the token is in. Owner: Tanay.
+
+### C6 — Hosted health reports Anthropic unavailable · OPEN — found 2026-09-22
+
+`GET https://meter-proxy.onrender.com/healthz` returned healthy after the free Render service
+woke, with `providers.openai: true` and `providers.anthropic: false`. This contradicts the
+README's promise to forward both providers and CONTEXT's record of funded, verified Anthropic
+traffic. It may be an intentionally absent deployment secret, but the public demo currently
+cannot substantiate the two-provider claim.
+
+**Recommendation:** inspect Render's non-secret configuration and either set a valid
+`ANTHROPIC_API_KEY` then run one safe smoke request, or qualify the hosted demo as OpenAI-only.
+Do not put a key in this repository to resolve it. Owner: deployment operator.
 
 ---
 

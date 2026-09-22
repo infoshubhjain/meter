@@ -52,7 +52,13 @@ export function JudgeStart() {
       </div>
 
       <Panel title="Start a session" tag="step 1 of 1">
-        <div className="flex flex-col gap-[20px] p-[20px]">
+        <form
+          className="flex flex-col gap-[20px] p-[20px]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void start();
+          }}
+        >
           <p className="t-body" style={{ color: "var(--color-text-secondary)" }}>
             You get your own Control Room — the same dashboard the team uses, showing only
             your calls. Every one is cost-predicted before it runs. Then you will watch a
@@ -60,9 +66,9 @@ export function JudgeStart() {
           </p>
 
           <div className="grid gap-[16px] sm:grid-cols-2">
-            <Field label="Your name" value={name} onChange={(v) => setName(v)}
+            <Field label="Your name" required value={name} onChange={(v) => setName(v)}
                    placeholder="Ada Lovelace" />
-            <Field label="Email" value={email} onChange={(v) => setEmail(v)}
+            <Field label="Email" required type="email" value={email} onChange={(v) => setEmail(v)}
                    placeholder="ada@example.com"
                    hint="The identity on any payment mandate you approve." />
           </div>
@@ -96,14 +102,14 @@ export function JudgeStart() {
           )}
 
           {error && (
-            <div className="rounded-[8px] px-[16px] py-[12px] text-[13px]"
+            <div role="alert" className="rounded-[8px] px-[16px] py-[12px] text-[13px]"
                  style={{ border: "1px solid var(--color-status-bad)",
                           color: "var(--color-status-bad)" }}>
               {error}
             </div>
           )}
 
-          <button className="judge-btn" disabled={busy} onClick={() => void start()}>
+          <button type="submit" className="judge-btn" disabled={busy}>
             {busy ? "Creating your session…" : "Start my session"}
           </button>
 
@@ -113,14 +119,14 @@ export function JudgeStart() {
             product working. Your keys are different: held in memory for this session
             only, never written to the ledger, and dropped the moment you finish.
           </p>
-        </div>
+        </form>
       </Panel>
     </main>
   );
 }
 
 function Field({
-  label, value, onChange, placeholder, hint, secret = false,
+  label, value, onChange, placeholder, hint, secret = false, required = false, type = "text",
 }: {
   label: string;
   value: string;
@@ -128,12 +134,15 @@ function Field({
   placeholder?: string;
   hint?: string;
   secret?: boolean;
+  required?: boolean;
+  type?: "email" | "text";
 }) {
   return (
     <label className="flex flex-col gap-[6px] text-[13px]">
       <span style={{ color: "var(--color-text-secondary)" }}>{label}</span>
-      <input className="judge-input" type={secret ? "password" : "text"} value={value}
+      <input className="judge-input" type={secret ? "password" : type} value={value}
              placeholder={placeholder} autoComplete="off"
+             required={required}
              onChange={(e) => onChange(e.target.value)} />
       {hint && (
         <span className="text-[12px]" style={{ color: "var(--color-text-tertiary)" }}>

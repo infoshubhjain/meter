@@ -32,7 +32,7 @@ export function LiveLogsTable({
   // Polls only while the tab is visible, backs off when nothing new arrives, and stops
   // once idle. See `usePoll` — the unconditional setInterval this replaced kept fetching
   // in a background window forever, which is metered on a serverless host.
-  const { data } = usePoll<{ logs: LiveLogRow[] }>(
+  const { data, status } = usePoll<{ logs: LiveLogRow[] }>(
     "/api/live-logs",
     { logs: initialRows },
     { intervalMs: POLL_INTERVAL_MS },
@@ -53,8 +53,8 @@ export function LiveLogsTable({
     <section id="logs" className="scroll-mt-[90px]">
       <DataTable
         title="Request Ledger"
-        tag="Live"
-        live
+        tag={status === "live" ? "Live" : status === "paused" ? "Paused" : "Offline"}
+        live={status === "live"}
         columns={[
           { label: "Member" },
           { label: "Model" },
@@ -113,6 +113,8 @@ export function LiveLogsTable({
           <>
             Last {rows.length} requests · polling every{" "}
             {POLL_INTERVAL_MS / 1000}s
+            {status === "paused" && " · paused while idle; interact to resume"}
+            {status === "offline" && " · last successful data retained; retrying"}
             {unpredicted > 0 && (
               <>
                 {" · "}

@@ -2,8 +2,10 @@ import type { HeadlineMetrics, WalletRow } from "@/lib/db";
 import {
   formatUsdHeadline,
   formatUsd,
+  isStale,
   providerLabel,
   relativeTime,
+  WALLET_STALE_AFTER_MS,
 } from "@/lib/format";
 
 /** Hours, said the way a person would say them. */
@@ -75,6 +77,8 @@ export function SpendHero({
 
   const runwayCritical =
     runway_hours !== null && runway_hours < runway_trigger_hours;
+  const walletStale =
+    wallet !== null && isStale(wallet.updated_at, WALLET_STALE_AFTER_MS);
 
   return (
     <div className="grid grid-cols-2 gap-[16px] lg:grid-cols-4">
@@ -125,12 +129,14 @@ export function SpendHero({
         label={wallet ? `${providerLabel(wallet.provider)} balance` : "Balance"}
         value={wallet ? formatUsdHeadline(wallet.balance_usd) : "—"}
         delay="delay-3"
-        tone={runwayCritical ? "bad" : undefined}
+        tone={runwayCritical ? "bad" : walletStale ? "warn" : undefined}
         sub={
           wallets === null
             ? "Treasury not initialised"
             : wallet
-              ? `Updated ${relativeTime(wallet.updated_at)}`
+              ? walletStale
+                ? `Stale · ${relativeTime(wallet.updated_at)}`
+                : `Updated ${relativeTime(wallet.updated_at)}`
               : "No wallets seeded"
         }
       />
@@ -170,7 +176,7 @@ function MetricCard({
   bar?: number;
   /** The lead card. One per row, or the emphasis means nothing. */
   accent?: boolean;
-  tone?: "bad";
+  tone?: "bad" | "warn";
   delay: string;
 }) {
   return (
@@ -192,7 +198,11 @@ function MetricCard({
 
       <div
         className={`t-metric ${
-          tone === "bad" ? "text-status-bad" : "text-text-primary"
+          tone === "bad"
+            ? "text-status-bad"
+            : tone === "warn"
+              ? "text-status-warn"
+              : "text-text-primary"
         }`}
       >
         {value}

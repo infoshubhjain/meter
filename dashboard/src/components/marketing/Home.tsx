@@ -203,17 +203,18 @@ export function Home() {
         </div>
       </div>
 
-      <div className="section-dots">
+      <nav className="section-dots" aria-label="Page sections">
         {SECTION_IDS.map((id, i) => (
           <a
             key={id}
             href={`#${id}`}
             onClick={jump(id)}
             className={section === i ? "active" : undefined}
+            aria-current={section === i ? "location" : undefined}
             aria-label={id.replace("-section", "")}
           />
         ))}
-      </div>
+      </nav>
 
       <div className="snap-container" ref={scroller}>
         {/* ── HERO ───────────────────────────────────────────────── */}
