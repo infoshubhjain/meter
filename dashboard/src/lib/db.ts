@@ -74,12 +74,23 @@ export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]
 // them — and neither will one where only the treasury scripts have run. Checking beats
 // catching, since the card wants to distinguish "not set up yet" from "set up and empty".
 //
-// Cached per process: this sits under a 3-second poll and the answer only changes when
-// someone restarts the proxy.
-const tableCache = new Map<string, boolean>();
+// Cached per process: present tables stay present, but an absent table can appear when a
+// proxy starts after the dashboard. Negative answers therefore expire instead of turning a
+// temporary setup order into a dashboard restart requirement.
+type Presence = { exists: boolean; checkedAt: number };
+const MISSING_SCHEMA_RECHECK_MS = 5_000;
+const tableCache = new Map<string, Presence>();
+
+function cachedPresence(cache: Map<string, Presence>, key: string): boolean | undefined {
+  const cached = cache.get(key);
+  if (!cached || (!cached.exists && Date.now() - cached.checkedAt >= MISSING_SCHEMA_RECHECK_MS)) {
+    return undefined;
+  }
+  return cached.exists;
+}
 
 async function tableExists(name: string): Promise<boolean> {
-  const cached = tableCache.get(name);
+  const cached = cachedPresence(tableCache, name);
   if (cached !== undefined) return cached;
   const rows = await query<{ one: number }>(
     `SELECT 1 AS one
@@ -88,7 +99,7 @@ async function tableExists(name: string): Promise<boolean> {
     [name],
   );
   const found = rows.length > 0;
-  tableCache.set(name, found);
+  tableCache.set(name, { exists: found, checkedAt: Date.now() });
   return found;
 }
 
@@ -96,11 +107,11 @@ async function tableExists(name: string): Promise<boolean> {
 // ALTER in proxy/db.py's connect(), so a database whose proxy has not been restarted
 // since that shipped has the table but not the columns — and SELECTing a missing column
 // throws rather than returning null.
-const columnCache = new Map<string, boolean>();
+const columnCache = new Map<string, Presence>();
 
 async function columnExists(table: string, column: string): Promise<boolean> {
   const cacheKey = `${table}.${column}`;
-  const cached = columnCache.get(cacheKey);
+  const cached = cachedPresence(columnCache, cacheKey);
   if (cached !== undefined) return cached;
   const rows = await query<{ one: number }>(
     `SELECT 1 AS one
@@ -110,7 +121,7 @@ async function columnExists(table: string, column: string): Promise<boolean> {
     [table, column],
   );
   const found = rows.length > 0;
-  columnCache.set(cacheKey, found);
+  columnCache.set(cacheKey, { exists: found, checkedAt: Date.now() });
   return found;
 }
 

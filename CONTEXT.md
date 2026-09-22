@@ -125,6 +125,9 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
     The dashboard's judge-scoped Treasurer feed now fails closed when a half-built schema
     has events but no wallets: events lack a project id, so returning the public feed there
     could disclose another session's activity.
+    Dashboard schema guards now cache positive table/column checks but recheck a missing one
+    after five seconds, so opening the dashboard before proxy bootstrap no longer leaves its
+    panels permanently empty until the dashboard process restarts.
     **Deployment handoff:** the local Vercel CLI token is invalid and the repository has no
     `.vercel/project.json`, so this branch cannot safely deploy to the existing dashboard until
     an authenticated team owner links the intended Vercel project.
