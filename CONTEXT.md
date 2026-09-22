@@ -120,6 +120,9 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
     visible shared ring (including the judge inputs that intentionally suppress the browser default).
     `dashboard/README.md` is now a real operator guide instead of the stock Next.js template:
     it records the read-only boundary, local setup, checks, and Vercel pooler choice.
+    **Deployment handoff:** the local Vercel CLI token is invalid and the repository has no
+    `.vercel/project.json`, so this branch cannot safely deploy to the existing dashboard until
+    an authenticated team owner links the intended Vercel project.
     The deployed Render
     `/healthz` probe initially timed out while the free instance slept, then returned healthy
     after waking with budget, breaker and predictor-refresh state. It also reports OpenAI
