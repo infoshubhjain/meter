@@ -122,6 +122,9 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
     it records the read-only boundary, local setup, checks, and Vercel pooler choice.
     Dashboard CI now runs `npm audit --omit=dev` rather than the old critical-only gate,
     because the production tree is clean after the Next.js upgrade.
+    The dashboard's judge-scoped Treasurer feed now fails closed when a half-built schema
+    has events but no wallets: events lack a project id, so returning the public feed there
+    could disclose another session's activity.
     **Deployment handoff:** the local Vercel CLI token is invalid and the repository has no
     `.vercel/project.json`, so this branch cannot safely deploy to the existing dashboard until
     an authenticated team owner links the intended Vercel project.

@@ -1060,6 +1060,10 @@ export async function getTreasuryEvents(limit = 40, scope: Scope = null): Promis
   // schema was created piecemeal, and losing the whole panel over a missing label
   // would be the wrong trade.
   const joined = await tableExists("wallets");
+  // The event itself does not carry a project id. A public dashboard can still render
+  // an unlabelled event when a half-built schema lacks wallets; a judge dashboard cannot
+  // prove the row belongs to its session in that state. Empty is the only safe answer.
+  if (scope !== null && !joined) return [];
   const rows = await query<
     Omit<TreasuryEvent, "decision"> & { decision_inputs: string | null }
   >(
