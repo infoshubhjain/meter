@@ -14,7 +14,7 @@ another (the one you "fixed" may have been the correct one).
 
 Status key: **OPEN** — needs a decision · **RESOLVED / DONE / SHIPPED** — closed, kept for the record.
 
-39 items: A1–A7 (contradictions), B1–B22 (gaps), C1–C6 (verification), D1–D4 (research findings).
+40 items: A1–A7 (contradictions), B1–B22 (gaps), C1–C7 (verification), D1–D4 (research findings).
 
 ---
 
@@ -1042,6 +1042,19 @@ cannot substantiate the two-provider claim.
 **Recommendation:** inspect Render's non-secret configuration and either set a valid
 `ANTHROPIC_API_KEY` then run one safe smoke request, or qualify the hosted demo as OpenAI-only.
 Do not put a key in this repository to resolve it. Owner: deployment operator.
+
+### C7 — Public walkthrough prints an active Meter credential · OPEN — found 2026-09-22
+
+`WALKTHROUGH.md` prints `mk_74e…` and uses it in its deployed curl commands. A Meter key
+is deliberately a proxy credential, so publishing one can be an intentional hackathon demo
+choice; it also lets anyone consume the deployment's provider credits until its project
+ceiling is reached or the key is rotated. The repository cannot establish the deployed key's
+scope, quota, rate limit, or revocation plan because `METER_KEYS` is a Render secret.
+
+**Recommendation:** the deployment owner should verify that this is a dedicated demo key,
+has only `proxy` scope, maps to a tightly capped project, and has a post-demo rotation plan.
+If it is not, replace the public curl path with the session-scoped `/try` flow and rotate the
+credential. Do not copy the production key into local configuration or git to verify it.
 
 ---
 

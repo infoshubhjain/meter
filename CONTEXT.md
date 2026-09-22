@@ -130,6 +130,8 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
     panels permanently empty until the dashboard process restarts.
     `WALKTHROUGH.md` and `SETUP.md` no longer pin dynamic learned-factor or test counts;
     their verification now checks the stable health invariants and includes the judge suite.
+    `PROPOSALS.md` C7 now requires the deployment owner to verify the public walkthrough's
+    Meter key is intentionally dedicated, constrained, and scheduled for rotation.
     **Deployment handoff:** the local Vercel CLI token is invalid and the repository has no
     `.vercel/project.json`, so this branch cannot safely deploy to the existing dashboard until
     an authenticated team owner links the intended Vercel project.
