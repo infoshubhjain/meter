@@ -74,15 +74,11 @@ jobs:
           cache-dependency-path: dashboard/package-lock.json
       - name: Install
         run: npm ci
-      # `critical`, not `high`, and that is a deliberate threshold rather than a dodge.
-      # As of 2026-08-03 the tree carries 3 high advisories (sharp/libvips
-      # CVE-2026-33327/33328/35590/35591 and postcss), all transitive through `next`, and
-      # `npm audit fix --force` "resolves" them by installing next@9.3.3 — a six-major
-      # downgrade that would delete this app. Gating on high would mean a permanently red
-      # build, and a permanently red build is one nobody reads. This still fails on
-      # anything critical. Revisit when Next ships a patched sharp.
+      # The shipped dependency tree is clean after the Next.js 16.3.5 update, so a
+      # production advisory is new signal, not inherited noise. Dev-only tooling stays
+      # out of this gate because it is not part of the deployed dashboard.
       - name: Dependency audit
-        run: npm audit --audit-level=critical
+        run: npm audit --omit=dev
       - name: Lint
         run: npm run lint
       - name: Build

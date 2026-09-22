@@ -120,6 +120,8 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
     visible shared ring (including the judge inputs that intentionally suppress the browser default).
     `dashboard/README.md` is now a real operator guide instead of the stock Next.js template:
     it records the read-only boundary, local setup, checks, and Vercel pooler choice.
+    Dashboard CI now runs `npm audit --omit=dev` rather than the old critical-only gate,
+    because the production tree is clean after the Next.js upgrade.
     **Deployment handoff:** the local Vercel CLI token is invalid and the repository has no
     `.vercel/project.json`, so this branch cannot safely deploy to the existing dashboard until
     an authenticated team owner links the intended Vercel project.
