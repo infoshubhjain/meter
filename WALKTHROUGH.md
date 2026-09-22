@@ -73,8 +73,9 @@ API keys and rate limits are irrelevant.
 curl -s https://meter-proxy.onrender.com/healthz
 ```
 
-Look for `"status":"ok"` and **`"learned_factors":31`** — the predictor has loaded 31
-per-feature corrections from the shared ledger.
+Look for `"status":"ok"`, `"predictor":{"available":true`, and a positive
+`"learned_factors"` count. The count grows as the shared ledger gains enough evidence for
+another correction factor; it is not a deployment constant.
 
 ### B2. Send one prompt
 
@@ -218,9 +219,9 @@ python -m uvicorn proxy.app:app --port 8080      # terminal 1
 cd dashboard && npm install && npm run dev       # terminal 2 (needs its own DATABASE_URL on :6543)
 ```
 
-**Check:** `curl localhost:8080/healthz` reports `learned_factors: 31`. If it reports `0`,
-run `python scripts/seed_demo.py` and restart — the predictor has no history and every
-estimate will be the raw heuristic, roughly 80% error instead of 10%.
+**Check:** `curl localhost:8080/healthz` reports a positive `learned_factors` count. If it
+reports `0`, run `python scripts/seed_demo.py` and restart — the predictor has no history
+and every estimate will be the raw heuristic, roughly 80% error instead of 10%.
 
 > `No module named uvicorn` means the virtualenv is not active. A new terminal does not
 > inherit it. Either `source .venv/bin/activate` first, or call
@@ -289,15 +290,16 @@ triggers the check. `POST /v1/breaker/reset` clears it immediately.
 ### C4. The automated checks
 
 ```bash
-python tests/test_predictor.py     # 131 — the estimator
-python tests/test_proxy.py         # 249 — proxy, ledger, breaker, budget
-python tests/test_treasury.py      # 182 — wallets, mandates, Treasurer
-python tests/test_alerts.py        #  46 — Poke/Linq
-python scripts/e2e_journey.py --offline   # 21 — drives the running app
+python tests/test_predictor.py     # estimator
+python tests/test_proxy.py         # proxy, ledger, breaker, budget
+python tests/test_treasury.py      # wallets, mandates, Treasurer
+python tests/test_alerts.py        # Poke/Linq
+python tests/test_judge.py         # session-scoped judge flow
+python scripts/e2e_journey.py --offline   # drives the running app
 ruff check .
 ```
 
-**608 + 21 checks in about a minute**, none of which call a provider.
+All checks run without calling a provider.
 
 `e2e_journey.py` exists because everything else tested modules in isolation, and
 `GET /mandates` was returning a **500** with all 608 of them passing.

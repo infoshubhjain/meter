@@ -167,7 +167,9 @@ Confirm the backend is healthy:
 curl -s localhost:8080/healthz | python3 -m json.tool
 ```
 
-**Expect** `"status": "ok"` and, in the `predictor` block, **`learned_factors: 31`**.
+**Expect** `"status": "ok"`, `predictor.available: true`, and a positive
+`predictor.learned_factors` count. The count grows as the ledger learns; it is not a
+fixed deployment value.
 
 > `learned_factors: 0` means the predictor has no history and every estimate will be
 > the raw heuristic — roughly 80% error instead of 10%. It is the single most common
@@ -560,14 +562,15 @@ sweep in §5, which is labelled.
 ## 10. Run the automated checks
 
 ```bash
-python tests/test_predictor.py     # 131 checks — the estimator
-python tests/test_proxy.py         # 242 checks — proxy, ledger, breaker, budget
-python tests/test_treasury.py      # 182 checks — wallets, mandates, Treasurer
-python tests/test_alerts.py        #  46 checks — Poke/Linq
-python scripts/e2e_journey.py --offline   # 21 checks, drives the running app
+python tests/test_predictor.py     # estimator
+python tests/test_proxy.py         # proxy, ledger, breaker, budget
+python tests/test_treasury.py      # wallets, mandates, Treasurer
+python tests/test_alerts.py        # Poke/Linq
+python tests/test_judge.py         # session-scoped judge flow
+python scripts/e2e_journey.py --offline   # drives the running app
 ```
 
-**601 + 21 checks, all green, in about a minute.**
+All checks should pass without calling a provider.
 
 `e2e_journey.py` is the one to run before any demo: it boots the real ASGI app and walks
 the whole journey. It exists because every other test exercised modules in isolation,

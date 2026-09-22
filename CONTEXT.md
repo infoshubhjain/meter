@@ -128,6 +128,8 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
     Dashboard schema guards now cache positive table/column checks but recheck a missing one
     after five seconds, so opening the dashboard before proxy bootstrap no longer leaves its
     panels permanently empty until the dashboard process restarts.
+    `WALKTHROUGH.md` and `SETUP.md` no longer pin dynamic learned-factor or test counts;
+    their verification now checks the stable health invariants and includes the judge suite.
     **Deployment handoff:** the local Vercel CLI token is invalid and the repository has no
     `.vercel/project.json`, so this branch cannot safely deploy to the existing dashboard until
     an authenticated team owner links the intended Vercel project.
