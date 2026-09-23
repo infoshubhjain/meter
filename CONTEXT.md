@@ -119,13 +119,14 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
     `/how-it-works`. Vercel production deployed commit `fc1b129`; the live Control Room was
     verified after launch.
 
-*   **Navigation-system audit, 2026-09-23 (Shubh) — ready to deploy.** All five product
+*   **Navigation-system audit, 2026-09-23 (Shubh) — production live.** All five product
     routes now use one shared, accessible product header (Overview, Predictor, Docs, Control
     Room, and the trial CTA). The former dashboard-only header mixed global routes with seven
     in-page anchors; those anchors are now an explicitly labelled Control Room “Jump to” rail.
     The trial entry and dashboard loading state now retain navigation, while obsolete animated
     intro and dark-background components were removed. Local route checks return 200 for `/`,
     `/docs`, `/how-it-works`, `/dashboard`, and `/try`; `npm run lint` and `npm run build` pass.
+    Vercel production deployed commit `bc79de4`; the live Control Room header was verified.
 
 *   **Dependency/UI audit, 2026-09-22 (Shubh) — dashboard patched and clean.** Next.js
     moved from `16.2.12` to `16.3.5`, closing the audit's critical RCE findings and
