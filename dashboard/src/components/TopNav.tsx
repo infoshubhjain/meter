@@ -69,17 +69,19 @@ export function TopNav() {
 function ThemeToggle() {
   useEffect(() => {
     const saved = window.localStorage.getItem("meter-theme");
-    const next = saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    document.documentElement.dataset.theme = next ? "dark" : "light";
+    const next = saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
   }, []);
 
-  function toggle() {
-    const next = document.documentElement.dataset.theme !== "dark";
-    document.documentElement.dataset.theme = next ? "dark" : "light";
-    window.localStorage.setItem("meter-theme", next ? "dark" : "light");
+  function select(next: "light" | "dark") {
+    document.documentElement.dataset.theme = next;
+    window.localStorage.setItem("meter-theme", next);
   }
 
-  return <button type="button" className="theme-toggle" onClick={toggle} aria-label="Toggle dark mode" title="Toggle dark mode">Theme</button>;
+  return <div className="theme-switch" role="group" aria-label="Color theme">
+    <button type="button" className="theme-light" onClick={() => select("light")} aria-label="Use light theme">Light</button>
+    <button type="button" className="theme-dark" onClick={() => select("dark")} aria-label="Use dark theme">Dark</button>
+  </div>;
 }
 
 /** Local navigation for the long operational page; it is not product navigation. */

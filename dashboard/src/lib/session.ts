@@ -1,5 +1,4 @@
 import { cookies } from "next/headers";
-import { isoNow, query } from "@/lib/db";
 
 /**
  * Resolving a judge's session on the *server*, so the Control Room can render their data.
@@ -41,54 +40,34 @@ export type JudgeContext = {
 /**
  * The live judge session for this request, or `null`.
  *
- * Read straight from `judge_sessions` rather than through the proxy's API: this file
- * already has a pooled connection to the same database, and going over HTTP would add a
- * round trip to a different host in front of every page render.
+ * Ask the proxy that owns the session. A broken dashboard ledger connection must not
+ * make a successfully created session disappear from the trial page.
  *
  * Returns `null` for an expired session as well as an absent one. The distinction matters
  * to the *console*, which tells a judge their session timed out — but the page underneath
  * has nothing to render either way, and showing a stale project's numbers would be worse
- * than showing the team's.
+ * than showing the team's. A proxy outage throws and shows the route's retry screen.
  */
 export async function judgeContext(): Promise<JudgeContext | null> {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
-  try {
-    const rows = await query<{
-      token: string;
-      project_id: string;
-      display_name: string | null;
-      calls_used: number;
-      call_cap: number;
-      expires_at: string;
-    }>(
-      `SELECT token, project_id, display_name, calls_used, call_cap, expires_at
-         FROM judge_sessions
-        WHERE token = $1 AND expires_at > $2
-        LIMIT 1`,
-      // `isoNow()`, not `toISOString()`. `expires_at` is TEXT and this is a STRING
-      // comparison, so the two sides have to have the same shape: the proxy writes
-      // microseconds and a `+00:00` offset, while `toISOString()` emits milliseconds and
-      // a `Z`. `Z` sorts above every digit, so a same-second comparison decides the wrong
-      // way. `db.ts` documents the same trap for the rolling-window queries; this call
-      // predated the helper.
-      [token, isoNow()],
-    );
-    const row = rows[0];
-    if (!row) return null;
-    return {
-      token: row.token,
-      projectId: row.project_id,
-      displayName: row.display_name,
-      callsUsed: Number(row.calls_used ?? 0),
-      callCap: Number(row.call_cap ?? 0),
-      expiresAt: row.expires_at,
-    };
-  } catch {
-    // The table will not exist on a database whose proxy predates the judge work. A
-    // missing table is "no session", not a broken dashboard.
-    return null;
-  }
+  const proxy = (process.env.NEXT_PUBLIC_METER_PROXY_URL ?? "http://localhost:8080").replace(/\/$/, "");
+  const response = await fetch(`${proxy}/judge/session`, {
+    headers: { "X-Judge-Session": token },
+    cache: "no-store",
+    signal: AbortSignal.timeout(12000),
+  });
+  if (response.status === 401 || response.status === 440) return null;
+  if (!response.ok) throw new Error(`Session service unavailable (${response.status})`);
+
+  const session = await response.json();
+  return {
+    token,
+    projectId: session.project_id,
+    displayName: session.display_name,
+    callsUsed: session.calls_used,
+    callCap: session.call_cap,
+    expiresAt: session.expires_at,
+  };
 }

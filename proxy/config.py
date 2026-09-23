@@ -229,5 +229,5 @@ CORS_ALLOW_VERCEL_PREVIEWS = _bool("CORS_ALLOW_VERCEL_PREVIEWS", False)
 
 CORS_ALLOW_ORIGINS = _str(
     "CORS_ALLOW_ORIGINS",
-    "https://meter-three-beta.vercel.app,http://localhost:3000,http://127.0.0.1:3000",
+    "https://meter-five-nu.vercel.app,http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000",
 )

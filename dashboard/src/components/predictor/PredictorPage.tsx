@@ -289,24 +289,22 @@ export function PredictorPage() {
               We price the call <em>before</em> we make it.
             </h1>
             <p className="px-lede">
-              Every other cost tool reads the bill after the money is gone. Meter
-              reads the prompt and forecasts the bill first, in about three
-              hundredths of a millisecond, with no network and no database. That
-              forecast is what a budget ceiling reserves against, which is the
-              only reason the ceiling can hold.
+              Meter reads the prompt before the provider call and estimates its
+              cost without a network or database round trip. The forecast informs
+              the dashboard; a separate reservation amount is used for budget checks.
             </p>
             <div className="px-hero-cta-row">
               <a href="#engine" className="hero-cta">
                 See it compute <span className="arr">↓</span>
               </a>
-              <span className="px-hero-stat">0.031ms · no I/O · deterministic</span>
+              <span className="px-hero-stat">in-process · no I/O · deterministic</span>
             </div>
           </div>
 
           <div className="px-engine-stage">
             <div className="px-stage-list" aria-label="Seven stages of the predictor">
               {STAGES.map((stage) => <div key={stage.n}><b>{stage.n}</b><span>{stage.tag}</span></div>)}
-              <p>pure computation<br /><strong>0.031 ms</strong><br />no network · no database</p>
+              <p>pure computation<br /><strong>7 stages</strong><br />no network · no database</p>
             </div>
           </div>
         </div>
@@ -408,7 +406,7 @@ export function PredictorPage() {
             bound
             tag="bound_output_tokens"
             front="What could it cost at worst?"
-            back="The hard ceiling reserves against this one. With max_tokens set, output cannot exceed it, so the guarantee is structural rather than statistical."
+            back="Budget checks reserve against this one. It is a hard bound only when max_tokens is enforced; without that cap, the learned p95 fallback is an estimate and can be exceeded."
           />
         </div>
         <div className="px-fastpath reveal" style={{ maxWidth: "none" }}>
@@ -490,8 +488,8 @@ export function PredictorPage() {
         <p className="px-body reveal">
           Everything above collapses to this. Read it inside out: build a scope
           from the prompt, scale it by what this kind of task normally does, scale
-          again by what this specific team normally does, then hold it under a
-          ceiling it structurally cannot cross.
+          again by what this specific team normally does, then compare it with
+          the request&apos;s output limit or a learned fallback.
         </p>
         <Formula />
       </section>

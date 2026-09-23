@@ -36,8 +36,7 @@ export function JudgeStart() {
         poke_phone: keys.phone.trim(),
       });
       rememberToken(session.token);
-      // The cookie is what the server component reads, so the page has to be re-rendered
-      // on the server rather than re-rendered on the client with the old props.
+      // Reload with the new cookie so the server renders the session immediately.
       router.refresh();
     } catch (err) {
       setError(err instanceof JudgeError ? err.message : String(err));

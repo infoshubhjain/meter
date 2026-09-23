@@ -137,6 +137,16 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
     lint` and `npm run build` pass; the local predictor and theme control were verified. Vercel
     production deployed commit `ae55ac1`; the live predictor was verified after launch.
 
+*   **Trial reliability + visual follow-up, 2026-09-23 (Shubh) — implementation in progress.**
+    The `/try` session rehydration now calls the proxy that owns the session rather than
+    treating an unreachable Vercel database as an expired session; a genuine proxy outage
+    shows a retry state. The loading view, predictor page grid, light/dark control, and
+    dark public-page contrast have been revised. Live preflight showed Render rejecting
+    `https://meter-five-nu.vercel.app` as a CORS origin; the source default and example
+    now name the actual production URL. The Render service environment must also be
+    checked for a stale `CORS_ALLOW_ORIGINS` override. Vercel's `DATABASE_URL` remains
+    unverified, so session creation and live ledger visibility require separate checks.
+
 *   **Dependency/UI audit, 2026-09-22 (Shubh) — dashboard patched and clean.** Next.js
     moved from `16.2.12` to `16.3.5`, closing the audit's critical RCE findings and
     its transitive `postcss`/`sharp` findings; the lockfile also resolves the remaining
