@@ -99,6 +99,24 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
 ## 6a. Current Status
 *(Keep this current — see `AGENTS.md` for the update policy. Update in the same turn as any scope or architecture decision, don't batch it for later.)*
 
+*   **Predictor research and repository audit, 2026-09-23 (Shubh) — local verification passed.**
+    The refresh gate now preserves an installed factor when a new fit improves on
+    the raw heuristic but is worse than the incumbent on the same recent rows;
+    a regression test covers that failure. An uncapped forecast is no longer
+    falsely clipped to, and labelled capped by, a statistical reservation; the
+    reservation instead rises to at least the forecast. Five evaluation scripts that had
+    drifted to the old arithmetic `k=20` shrinkage now use or describe the shipped
+    geometric `k=1` rule. Recomputed five-fold results: v1 82.6% → 8.1% median
+    error (200 calls, five templates), v2 65.0% → 9.0% (264 calls, eight templates).
+    A shuffled test-then-train replay of 1,224 templated calls improved from 39.0%
+    first-third to 15.7% last-third mean batch-median error. These are not a clean
+    paper-quality external test; v2 informed tuning and the incumbent gate can have
+    seen recent rows on a prior pass. `RESEARCH_ROADMAP.md` records the full
+    evidence, audit priorities, study design, and publication bar. The public
+    predictor page now shows the rerun numbers. Predictor/proxy checks, dashboard
+    lint/build, 20-second 16-client soak, npm production audit and pip audit pass.
+    The live CORS/database handoff remains external deployment work.
+
 *   **Predictor correctness follow-up, 2026-09-23 (Shubh) — local checks passing; production verification pending.**
     Multi-turn scope signals now use the latest user request plus standing system/developer
     constraints rather than stale assistant and user turns. Structured text blocks and tool

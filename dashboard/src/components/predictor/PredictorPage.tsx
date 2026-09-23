@@ -6,11 +6,7 @@ import { TopNav } from "@/components/TopNav";
 import { gsap } from "gsap";
 
 /**
- * The predictive-engine explainer, built as one interactive scene.
- *
- * The whole page hangs on a single metaphor: a prediction is a physical thing
- * moving through a machine. Every 3D plate, particle, and animated number serves
- * that, nothing is decoration for its own sake.
+ * The predictive-engine explainer follows the shipped estimator stage by stage.
  *
  * SOURCE OF TRUTH: every constant and every figure below was read out of the
  * SHIPPED engine, not out of predictor/DESIGN.md. Those two have diverged, and
@@ -21,9 +17,7 @@ import { gsap } from "gsap";
  * The worked example was produced by running predict() on that exact prompt.
  * If you change a constant, re-run the engine and update this file from output.
  *
- * 3D is CSS `preserve-3d` rather than WebGL on purpose: real depth and
- * cursor-reactive parallax, none of the WebGL failure surface, and it degrades to
- * a flat static page under prefers-reduced-motion.
+ * Figures must be rerun against their named evaluation scripts before editing.
  */
 
 // The seven stages of `Predictor.predict()`, in the order the code runs them.
@@ -99,7 +93,7 @@ const STAGES: {
     tag: "Clamp and bound",
     title: "Two numbers leave the engine.",
     body: "max_tokens clamps the forecast, it never replaces it. Letting it short-circuit the pipeline measured 594% error against 192% for clamping, because max_tokens is a safety valve most SDKs set by default, not a statement of intent. A team with 4096 boilerplate would otherwise get one identical prediction for every prompt they ever send.",
-    formula: "predicted = min(max(15, scope x factor), bound)\nbound = max_tokens, else p95[bucket] x 1.2, else 4096",
+    formula: "predicted = max(15, scope x factor); cap only at max_tokens\nbound = max_tokens, else max(predicted, learned p95 x 1.2 or 4096)",
     readout: 2873,
     note: "bound 4096",
   },
@@ -608,8 +602,8 @@ export function PredictorPage() {
         <LoopRing />
         <div className="px-statrow reveal">
           {[
-            ["82.6% → 28.8%", "median error once the loop installs, k-fold out of sample"],
-            ["65.0% → 31.6%", "the same method on a second, independent set of 8 templates"],
+            ["82.6% → 8.1%", "current shrinkage, k-fold on the original 5 templates"],
+            ["65.0% → 9.0%", "the same method on a second set of 8 templates"],
             ["7 of 8", "features the live gate accepted, every one an improvement"],
           ].map(([n, l]) => (
             <div className="px-stat" key={n}>

@@ -89,7 +89,7 @@ def main() -> int:
     out.append(stats(pred, act, "open-ended (WildChat test)"))
 
     # ── templated traffic: the 200 paid probe calls, k-fold corrected ─────────
-    from scripts.history_value import evaluate, SRC, FOLDS, SHRINK  # noqa: F401
+    from scripts.history_value import SRC, FOLDS, fit_factors
 
     rows = [json.loads(line) for line in SRC.read_text().splitlines() if line.strip()]
     keys = [f"{r['project']}/{r['feature']}" for r in rows]
@@ -107,8 +107,7 @@ def main() -> int:
         for i, r in enumerate(rows):
             if i not in test_i and r["predicted_scope_tokens"] > 0:
                 ratios.setdefault(keys[i], []).append(r["output_tokens"] / r["predicted_scope_tokens"])
-        fac = {k: (len(v) * float(np.median(v)) + SHRINK) / (len(v) + SHRINK)
-               for k, v in ratios.items()}
+        fac = fit_factors(ratios)
         for i in test_i:
             corr[i] = rows[i]["predicted_scope_tokens"] * fac.get(keys[i], 1.0)
     out.append(stats(corr, act_t, "templated + history"))

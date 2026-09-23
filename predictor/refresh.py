@@ -120,8 +120,9 @@ def _key_for(row, factors) -> Tuple | None:
     return None
 
 
-def _select_keys(holdout, candidate: Dict[Tuple, float]) -> Tuple[Dict[Tuple, float], dict]:
-    """Keep only the candidate keys that beat 1.0 on held-out rows they own.
+def _select_keys(holdout, candidate: Dict[Tuple, float],
+                 current: Dict[Tuple, float] | None = None) -> Tuple[Dict[Tuple, float], dict]:
+    """Keep candidates only when they beat both the raw and installed forecasts.
 
     All-or-nothing gating was rejecting genuinely good candidates. Measured on 200 calls
     of templated traffic, one factor per feature: four of five features improved by 2-3x
@@ -133,15 +134,14 @@ def _select_keys(holdout, candidate: Dict[Tuple, float]) -> Tuple[Dict[Tuple, fl
     factors are independent by construction -- a correction for one feature says nothing
     about another. Each is accepted on its own held-out evidence.
     """
-    import numpy as np
-
+    current = current or {}
     owned: Dict[Tuple, list] = defaultdict(list)
     for r in holdout:
         key = _key_for(r, candidate)
         scope = float(r["predicted_scope_tokens"] or 0)
         actual = int(r["output_tokens"] or 0)
         if key is not None and scope > 0 and actual > 0:
-            owned[key].append((scope, actual))
+            owned[key].append(r)
 
     kept, report = {}, {}
     for key, obs in owned.items():
@@ -151,11 +151,15 @@ def _select_keys(holdout, candidate: Dict[Tuple, float]) -> Tuple[Dict[Tuple, fl
         if len(obs) < MIN_HOLDOUT_PER_KEY:
             report[key] = "unproven"
             continue
-        before = float(np.median([abs(s - a) / a for s, a in obs]))
-        after = float(np.median([abs(s * f - a) / a for s, a in obs]))
-        if after < before - 0.005:
+        before = _median_err(obs, {})
+        incumbent = _median_err(obs, current)
+        after = _median_err(obs, {key: f})
+        if after < min(before, incumbent) - 0.005:
             kept[key] = f
-            report[key] = f"kept {before*100:.0f}%->{after*100:.0f}%"
+            report[key] = f"kept {min(before, incumbent)*100:.0f}%->{after*100:.0f}%"
+        elif key in current and incumbent < before - 0.005:
+            kept[key] = current[key]
+            report[key] = f"carried (new fit {after*100:.0f}% vs installed {incumbent*100:.0f}%)"
         else:
             report[key] = f"dropped {before*100:.0f}%->{after*100:.0f}%"
     return kept, report
@@ -229,10 +233,10 @@ def refresh_now(db_path: str | None = None, gate: bool = True) -> Dict[str, Any]
     "learned" -- the fitted factors were worse than no correction at all on traffic
     whose keys group unrelated prompts.
 
-    So candidates are fitted on the older 75% of rows and scored against the most
-    recent 25%, which the fit never saw. They are installed only if held-out median
-    error improves. Worst case becomes "no change" instead of "worse", which is the
-    property that makes this safe to run unattended.
+    Candidates are fitted on the older 75% of rows and scored against the most
+    recent 25%, which the candidate fit never saw. An already-installed factor
+    may have seen those rows on a prior refresh, so this is a regression guard,
+    not an unbiased prospective estimate of future improvement.
     """
     from . import engine
 
@@ -268,7 +272,7 @@ def refresh_now(db_path: str | None = None, gate: bool = True) -> Dict[str, Any]
     # MIN_ROWS_FOR_KEY skip and the [0.5, 3.0] clamp.
     candidate = engine.shrink_history(candidate_h)
 
-    kept, report = _select_keys(holdout, candidate)
+    kept, report = _select_keys(holdout, candidate, engine.current_history())
 
     # A key that could not be *re-validated* this pass keeps the factor it already had.
     #

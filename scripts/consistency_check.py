@@ -3,17 +3,17 @@
 
     python scripts/consistency_check.py
 
-Set v1 (200 calls, 5 templates) produced the headline: the per-(project, feature)
-factor took median APE from 82.6% to 28.8%. Two things could undermine that:
+Set v1 (200 calls, 5 templates) lets us evaluate the shipped per-(project, feature)
+factor against a fixed probe. Two things could undermine that result:
 
   * 80 of those 200 responses stopped at max_tokens=400, so the "actual" was a
     lower bound on natural length, not the natural length.
   * The templates were written by the same person who designed the estimator.
 
 Set v2 is 264 calls over 8 DIFFERENT templates with max_tokens=1500, chosen so
-almost nothing truncates. It has never been used to fit or tune anything. If the
-method is real, it reproduces here. If it does not, the honest answer is that v1
-was a property of those templates.
+almost nothing truncates. Each scored row is held out from its own factor fit,
+but this dataset has informed later shrinkage choices: it is not a pristine
+untouched test set for a paper.
 
 Reports every metric from accuracy_report.py, base and corrected, plus the live
 gated loop's own verdict -- because "does k-fold say the factor helps" and "does
@@ -38,7 +38,6 @@ from scripts._scratch import scratch_ledger              # noqa: E402
 from scripts.accuracy_report import stats, show          # noqa: E402
 
 FOLDS = 5
-SHRINK = 20.0
 TARGET_MEDIAN = 30.0        # the MVP target for templated traffic
 TARGET_WITHIN_2X = 60.0
 
@@ -50,6 +49,8 @@ def kfold_corrected(rows: list[dict], keys: list[str]) -> np.ndarray:
     row ever contributes to its own correction.
     """
     idx = np.arange(len(rows))
+    from scripts.history_value import fit_factors
+
     np.random.default_rng(0).shuffle(idx)
     out = np.zeros(len(rows))
     for f in range(FOLDS):
@@ -59,8 +60,7 @@ def kfold_corrected(rows: list[dict], keys: list[str]) -> np.ndarray:
             if i not in test and r["predicted_scope_tokens"] > 0:
                 ratios.setdefault(keys[i], []).append(
                     r["output_tokens"] / r["predicted_scope_tokens"])
-        fac = {k: (len(v) * float(np.median(v)) + SHRINK) / (len(v) + SHRINK)
-               for k, v in ratios.items()}
+        fac = fit_factors(ratios)
         for i in test:
             out[i] = rows[i]["predicted_scope_tokens"] * fac.get(keys[i], 1.0)
     return out
@@ -114,7 +114,7 @@ def main() -> int:
 
     print(f"SET v2 — {len(rows)} calls, {len(set(keys))} features, "
           f"{trunc} truncated ({trunc/len(rows)*100:.1f}%)")
-    print("never used to fit or tune anything\n")
+    print("out-of-fold scoring; this corpus informed later shrinkage choices\n")
 
     actual = np.array([r["output_tokens"] for r in rows], float)
     base = np.array([r["predicted_output_tokens"] for r in rows], float)

@@ -206,6 +206,13 @@ def test_max_tokens() -> None:
     check("bound exists without max_tokens", predict("hi", MODEL).bound_output_tokens > 0)
     check("uncapped fallback is statistical, not a hard guarantee",
           not predict("hi", MODEL).bound_is_hard)
+    uncapped = Predictor()
+    uncapped.load_bounds({"code": [20] * 40})
+    ambitious = uncapped.predict("Write a complete production-ready web framework.", MODEL)
+    check("statistical hold does not truncate an uncapped forecast",
+          ambitious.predicted_output_tokens > 24
+          and ambitious.bound_output_tokens >= ambitious.predicted_output_tokens
+          and not ambitious.capped_by_max_tokens)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -602,6 +609,14 @@ def test_refresh_gate() -> None:
           "code" in refresh.validated_bounds(fit_outputs, stable))
     check("tail drift keeps the larger fallback reservation",
           "code" not in refresh.validated_bounds(fit_outputs, shifted))
+
+    recent = [{"project_id": "proj", "feature": "good", "actor": "actor",
+               "bucket": "default", "model": "gpt-4o", "predicted_scope_tokens": 400,
+               "output_tokens": 100}] * 20
+    key = ("proj", "good", "actor")
+    kept, report = refresh._select_keys(recent, {key: 0.5}, {key: 0.25})
+    check("a worse refit cannot replace a better installed factor",
+          kept.get(key) == 0.25 and str(report[key]).startswith("carried"))
 
     p = Predictor()
     p._history = {}

@@ -97,10 +97,8 @@ def stage_corpus(cap_usd: float, n: int, holdout: int, yes: bool) -> dict:
 def stage_tune() -> dict:
     """Sweep the shrinkage constant on held-out slots only.
 
-    `k` controls how far a fitted factor is pulled back toward 1.0. It was set to 20
-    and never revisited. Two features measured so far want factors of 8x and 11x and
-    are being held to 5.5x and 7.2x, which shows up as every single held-out row being
-    under-predicted. This measures the effect across every feature at once.
+    `k` controls geometric shrinkage toward 1.0. The shipped value is 1; compare
+    it against alternatives without changing production code automatically.
     """
     import numpy as np
 
@@ -132,7 +130,8 @@ def stage_tune() -> dict:
         raw = float(np.median([r["output_tokens"] / r["_scope"] for r in fit]))
         a = np.array([r["output_tokens"] for r in ho], float)
         s = np.array([r["_scope"] for r in ho], float)
-        table[f] = {k: float(np.median(np.abs(s * ((n * raw + k) / (n + k)) - a) / a) * 100)
+        table[f] = {k: float(np.median(np.abs(s * np.exp(n * np.log(max(raw, 1e-9))
+                                                   / (n + k)) - a) / a) * 100)
                     for k in ks}
 
     if not table:
@@ -140,8 +139,9 @@ def stage_tune() -> dict:
     overall = {k: float(np.median([v[k] for v in table.values()])) for k in ks}
     best = min(overall, key=overall.get)
     log(f"tune: best k={best} ({overall[best]:.1f}% median across {len(table)} features); "
-        f"current k=20 is {overall[20]:.1f}%")
-    return {"per_feature": table, "overall": overall, "best_k": best, "ks": ks}
+        f"current k=1 is {overall[1]:.1f}%")
+    return {"per_feature": table, "overall": overall, "best_k": best,
+            "ks": ks, "method": "geometric"}
 
 
 def save_stage(name: str, payload) -> None:
@@ -243,8 +243,10 @@ def write_report(corpus: dict, tune: dict, seed: dict, started: float,
 
     if tune:
         ks = tune["ks"]
+        method = tune.get("method", "arithmetic (historical checkpoint)")
+        reference_k = 1 if method == "geometric" else 20
         lines += [
-            "## Shrinkage sweep (held-out slots only)",
+            f"## Shrinkage sweep ({method}; held-out slots only)",
             "",
             "`k` pulls a fitted factor back toward 1.0. Lower trusts the data more. "
             "Every number below is median APE on slot fillings the engine never saw.",
@@ -258,7 +260,8 @@ def write_report(corpus: dict, tune: dict, seed: dict, started: float,
         lines += ["| **median** | " + " | ".join(f"**{o[k]:.0f}%**" for k in ks) + " |", ""]
         lines += [
             f"**Best k = {tune['best_k']}** at {o[tune['best_k']]:.1f}%, against "
-            f"{o[20]:.1f}% for the current k=20 — a {o[20] - o[tune['best_k']]:.1f} point "
+            f"{o[reference_k]:.1f}% for that run's reference k={reference_k} — "
+            f"a {o[reference_k] - o[tune['best_k']]:.1f} point "
             "improvement.",
             "",
             "NOT APPLIED. Changing `k` changes every prediction the product makes, so it "

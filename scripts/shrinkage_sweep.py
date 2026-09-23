@@ -3,10 +3,8 @@
 
     python scripts/shrinkage_sweep.py
 
-`engine.Predictor.load_history` blends a fitted factor toward 1.0 by
-`(n*raw + k) / (n + k)`, with `k = 20`. That constant was set once and never revisited.
-Its purpose is to distrust a factor computed from few observations -- sound in
-principle, and this measures whether it is earning its place in practice.
+`engine.Predictor.load_history` now uses geometric shrinkage with `k = 1`.
+This replay compares that shipped value with the old `k = 20` on held-out slots.
 
 Three questions, because the first two can each be answered misleadingly:
 
@@ -67,7 +65,7 @@ def split(rows, feat):
 def err(fit, ho, k) -> float:
     n = len(fit)
     raw = float(np.median([r["output_tokens"] / r["_scope"] for r in fit]))
-    factor = (n * raw + k) / (n + k)
+    factor = float(np.exp(n * np.log(max(raw, 1e-9)) / (n + k)))
     a = np.array([r["output_tokens"] for r in ho], float)
     s = np.array([r["_scope"] for r in ho], float)
     return float(np.median(np.abs(s * factor - a) / a) * 100)
@@ -85,7 +83,7 @@ def main() -> int:
     print("   " + "".join(f"{'k=' + str(k):>9}" for k in KS))
     print("   " + "".join(f"{overall[k]:>8.1f}%" for k in KS))
     best = min(overall, key=overall.get)
-    print(f"   best k={best} at {overall[best]:.1f}%, against {overall[20]:.1f}% shipped\n")
+    print(f"   best k={best} at {overall[best]:.1f}%, against {overall[1]:.1f}% shipped\n")
 
     # ── 2. by fit-set size ───────────────────────────────────────────────────
     print("2. BY FIT-SET SIZE (subsample the fit set, refit, 40 draws each)")
@@ -121,7 +119,7 @@ def main() -> int:
         print(f"   {f:<24}{spread:>7.1f}x" + "".join(f"{e[k]:>7.1f}%" for k in KS)
               + f"{b:>6}")
     print(f"\n   features preferring k>2: {prefer_high or 'none'}")
-    print("   no feature prefers the shipped k=20." if 20 not in
+    print("   no feature prefers the old k=20." if 20 not in
           {min({k: err(*split(rows, f), k) for k in KS}.items(), key=lambda t: t[1])[0]
            for f in usable} else "")
     return 0

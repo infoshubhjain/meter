@@ -28,7 +28,15 @@ sys.path.insert(0, str(REPO))
 
 SRC = REPO / "data" / "templated" / "gpt-4o-mini.jsonl"
 FOLDS = 5
-SHRINK = 20.0     # same Bayesian shrinkage toward 1.0 that refresh.py applies
+
+
+def fit_factors(ratios: dict[str, list[float]]) -> dict[str, float]:
+    """Use the installed engine's threshold, geometric shrinkage, and clamp."""
+    from predictor import Predictor
+
+    fitted = Predictor().shrink_history({(key,): (float(np.median(values)), len(values))
+                                         for key, values in ratios.items()})
+    return {key[0]: factor for key, factor in fitted.items()}
 
 
 def ape(pred: np.ndarray, actual: np.ndarray) -> float:
@@ -53,8 +61,7 @@ def evaluate(rows: list[dict], keys: list[str]) -> tuple[float, float]:
             scope = r["predicted_scope_tokens"]
             if scope > 0:
                 ratios.setdefault(keys[i], []).append(r["output_tokens"] / scope)
-        factors = {k: (len(v) * float(np.median(v)) + SHRINK) / (len(v) + SHRINK)
-                   for k, v in ratios.items()}
+        factors = fit_factors(ratios)
 
         for i in sorted(test):
             r = rows[i]

@@ -13,7 +13,7 @@ Pipeline:
     1. STRUCTURAL OVERRIDE      json schema -> to step 4
     2. EXPLICIT LENGTH          "in two sentences" -> to step 4      (scope.py)
     3. TASK STACKING            tasks x verb x CoT x instruction     (scope.py)
-    4. SAFETY BUFFER            per-bucket, asymmetric
+    4. SEPARATE HOLD            output cap or statistical reservation
     5. HISTORY CORRECTION       per (project, feature, actor)
     6. CLAMP                    min(prediction, max_tokens)
 
@@ -26,9 +26,8 @@ Three properties the proxy depends on:
     database -- the history correction reads an in-memory table refreshed on a timer,
     never a query in the request path.
 
-  * Deliberately biased high. Under-predicting lets a request through that should
-    have been blocked, so the ceiling silently leaks; over-predicting holds budget
-    that is released seconds later at CAPTURE.
+  * Forecast and reservation are distinct. The forecast targets typical output;
+    the budget hold is higher, but an uncapped hold is still not a guarantee.
 
 The prediction never affects billing. Billing prices the provider's actual usage.
 """
@@ -50,14 +49,10 @@ from .learner import Fit, fit_all
 Messages = List[Dict[str, Any]]
 Payload = Union[str, Messages]
 
-# Step 4. Default buffer, applied per bucket and replaced by fitted values as the
-# ledger fills. Flat 1.30 is a starting guess, not a measurement: observed
-# under-prediction was 53% overall but 100% for `code` and 0% for `summary`, so one
-# global constant demonstrably cannot serve every bucket.
+# No forecast safety multiplier: the old flat 1.30 double-corrected history.
 # 1.0, deliberately. The buffer existed to buy safety by over-predicting, but safety
 # is represented by a separate reservation; only an explicit output cap makes its
-# output-token bound structural. Keeping a
-# multiplicative buffer on the prediction path double-corrects: the buffer and the
+# output-token bound structural. A multiplicative buffer double-corrects: it and the
 # history factor are BOTH fitted as actual/scope, so applying both computes
 # scope x (actual/scope) x (actual/scope). A prequential run caught this as median
 # error rising from 77% to 204% as the loop "learned".
@@ -283,10 +278,13 @@ class Predictor:
         # statement of intent. A team with max_tokens=4096 boilerplate would otherwise
         # get one identical prediction for every prompt they ever send.
         bound = self._bound_for(bucket, max_tokens)
-        capped = predicted > bound
+        hard_cap = bool(max_tokens and max_tokens > 0)
+        capped = hard_cap and predicted > bound
         if capped:
             predicted = bound
             method = f"{method}+capped"
+        elif not hard_cap:
+            bound = max(bound, predicted)
 
         pred_cost, pricing_version, _ = price(
             Usage(input_tokens=input_tokens, output_tokens=predicted), model
@@ -303,7 +301,7 @@ class Predictor:
             bucket=bucket,
             predicted_cost_usd=pred_cost,
             bound_cost_usd=bound_cost,
-            bound_is_hard=bool(max_tokens and max_tokens > 0),
+            bound_is_hard=hard_cap,
             method=method,
             model=model,
             pricing_version=pricing_version,

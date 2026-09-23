@@ -45,8 +45,9 @@ Three properties you can rely on:
 ### Forecast versus reservation
 
 The forecast is calibrated for typical output length and carries no safety multiplier.
-The reservation uses an explicit output cap when supplied, otherwise a learned per-bucket
-p95 × 1.2. That fallback is a useful hold, not a hard upper bound. The refresh report
+The reservation uses an explicit output cap when supplied, otherwise at least the
+larger of the forecast and a learned per-bucket p95 × 1.2 (or a fixed 4,096 fallback).
+That fallback is a useful hold, not a hard upper bound. The refresh report
 includes `bound_exceeded_pct` so tail misses are visible beside forecast error.
 
 **The predictor never affects billing.** Billing uses the provider's actual usage. This only
@@ -101,8 +102,8 @@ has been run.**
 python tests/test_predictor.py      # plain asserts, no framework
 ```
 
-Same convention as `tests/test_proxy.py`. They pin determinism, the `max_tokens` hard cap,
-classifier buckets, the high bias, and the learner's ability to recover a known relationship.
+Same convention as `tests/test_proxy.py`. They pin determinism, the explicit output cap,
+classifier buckets, reservation labeling, and the learner's ability to recover a known relationship.
 Run it before committing anything under `predictor/`.
 
 ## Method
