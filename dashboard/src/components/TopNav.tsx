@@ -60,9 +60,26 @@ export function TopNav() {
           </Link>
         ))}
       </nav>
+      <ThemeToggle />
       <Link href="/try" className="product-cta">Try the system <span>↗</span></Link>
     </header>
   );
+}
+
+function ThemeToggle() {
+  useEffect(() => {
+    const saved = window.localStorage.getItem("meter-theme");
+    const next = saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.dataset.theme = next ? "dark" : "light";
+  }, []);
+
+  function toggle() {
+    const next = document.documentElement.dataset.theme !== "dark";
+    document.documentElement.dataset.theme = next ? "dark" : "light";
+    window.localStorage.setItem("meter-theme", next ? "dark" : "light");
+  }
+
+  return <button type="button" className="theme-toggle" onClick={toggle} aria-label="Toggle dark mode" title="Toggle dark mode">Theme</button>;
 }
 
 /** Local navigation for the long operational page; it is not product navigation. */

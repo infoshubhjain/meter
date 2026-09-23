@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { TopNav } from "@/components/TopNav";
-import Lenis from "lenis";
 import { gsap } from "gsap";
 
 /**
@@ -186,7 +185,6 @@ const REDUCED = () =>
 export function PredictorPage() {
   const [activeStage, setActiveStage] = useState(0);
   const readoutRef = useRef<HTMLSpanElement>(null);
-  const engineRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   // Smooth momentum scroll, plus the two scroll-driven behaviours: reveal-on-enter
@@ -212,11 +210,6 @@ export function PredictorPage() {
     // this effect never runs (script error, chunk failure, reduced motion) the
     // page renders fully visible rather than blank. Content first, motion second.
     root.classList.add("px-js");
-
-    const lenis = new Lenis({ duration: 1.1, smoothWheel: true });
-    const raf = (time: number) => lenis.raf(time * 1000);
-    gsap.ticker.add(raf);
-    gsap.ticker.lagSmoothing(0);
 
     const revealIO = new IntersectionObserver(
       (entries) => {
@@ -251,8 +244,6 @@ export function PredictorPage() {
     return () => {
       revealIO.disconnect();
       stepIO.disconnect();
-      gsap.ticker.remove(raf);
-      lenis.destroy();
       root.classList.remove("px-js");
     };
   }, []);
@@ -283,25 +274,6 @@ export function PredictorPage() {
     };
   }, [activeStage]);
 
-  // Cursor-reactive depth on the hero engine.
-  const onHeroMove = useCallback((e: React.MouseEvent) => {
-    if (REDUCED()) return;
-    const el = engineRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const px = (e.clientX - r.left) / r.width - 0.5;
-    const py = (e.clientY - r.top) / r.height - 0.5;
-    el.style.setProperty("--rx", `${(-py * 16).toFixed(2)}deg`);
-    el.style.setProperty("--ry", `${(px * 20).toFixed(2)}deg`);
-  }, []);
-  const onHeroLeave = useCallback(() => {
-    const el = engineRef.current;
-    if (el) {
-      el.style.setProperty("--rx", "0deg");
-      el.style.setProperty("--ry", "0deg");
-    }
-  }, []);
-
   return (
     <div className="px" ref={rootRef}>
       <TopNav />
@@ -309,8 +281,6 @@ export function PredictorPage() {
       {/* ── HERO ─────────────────────────────────────────────── */}
       <section
         className="px-hero"
-        onMouseMove={onHeroMove}
-        onMouseLeave={onHeroLeave}
       >
         <div className="px-hero-grid wrap">
           <div className="px-hero-copy">
@@ -333,23 +303,10 @@ export function PredictorPage() {
             </div>
           </div>
 
-          {/* The engine object: seven translucent plates in real 3D, a token
-              falling through them. Tilts toward the cursor. */}
           <div className="px-engine-stage">
-            <div className="px-engine-tilt">
-              <div className="px-engine" ref={engineRef}>
-                {STAGES.map((s, i) => (
-                  <div
-                    className="px-plate"
-                    key={s.n}
-                    style={{ "--i": i } as React.CSSProperties}
-                  >
-                    <span className="px-plate-n">{s.n}</span>
-                    <span className="px-plate-tag">{s.tag}</span>
-                  </div>
-                ))}
-                <div className="px-token" aria-hidden="true" />
-              </div>
+            <div className="px-stage-list" aria-label="Seven stages of the predictor">
+              {STAGES.map((stage) => <div key={stage.n}><b>{stage.n}</b><span>{stage.tag}</span></div>)}
+              <p>pure computation<br /><strong>0.031 ms</strong><br />no network · no database</p>
             </div>
           </div>
         </div>
@@ -431,10 +388,10 @@ export function PredictorPage() {
 
       {/* ── TWO NUMBERS: 3D flip cards ───────────────────────── */}
       <section className="px-sec wrap">
-        <p className="section-label reveal">The structural trick</p>
+            <p className="section-label reveal">The structural trick</p>
         <h2 className="px-h2 reveal">
           Every call returns two numbers.{" "}
-          <span className="px-grad">Hover to turn them over.</span>
+          <span className="px-grad">Two jobs, one safe request.</span>
         </h2>
         <p className="px-body reveal">
           Conflating these is why the first version got both wrong. A forecast
@@ -838,16 +795,9 @@ function FlipCard({
 }) {
   return (
     <div className={`px-flip${bound ? " bound" : ""}`}>
-      <div className="px-flip-inner">
-        <div className="px-flip-face">
-          <span className="px-flip-tag">{tag}</span>
-          <p className="px-flip-q">{front}</p>
-          <span className="px-flip-hint">hover →</span>
-        </div>
-        <div className="px-flip-face px-flip-back">
-          <p className="px-flip-a">{back}</p>
-        </div>
-      </div>
+      <span className="px-flip-tag">{tag}</span>
+      <p className="px-flip-q">{front}</p>
+      <p className="px-flip-a">{back}</p>
     </div>
   );
 }
@@ -1006,7 +956,7 @@ const LOOP = ["predict", "reserve", "call", "capture", "refit"];
 function LoopRing() {
   return (
     <div className="px-loop reveal">
-      <div className="px-loop-ring">
+      <div className="px-loop-flow">
         {LOOP.map((label, i) => (
           <div
             className={`px-loop-node${label === "capture" ? " accent" : ""}${
@@ -1020,16 +970,7 @@ function LoopRing() {
             {label}
           </div>
         ))}
-        <div className="px-loop-orbit" aria-hidden="true">
-          <span className="px-loop-particle" />
-        </div>
-        <div className="px-loop-core">
-          actual
-          <br />
-          feeds
-          <br />
-          forecast
-        </div>
+        <span className="px-loop-caption">actual usage feeds the next forecast</span>
       </div>
     </div>
   );

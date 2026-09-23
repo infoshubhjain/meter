@@ -128,6 +128,14 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
     `/docs`, `/how-it-works`, `/dashboard`, and `/try`; `npm run lint` and `npm run build` pass.
     Vercel production deployed commit `bc79de4`; the live Control Room header was verified.
 
+*   **Predictor visual audit + dark mode, 2026-09-23 (Shubh) — ready to deploy.** The
+    predictor now presents its seven stages as a high-contrast technical brief rather than a
+    3D plate/token scene. Hover-only flip cards, orbiting particles, cursor parallax, smooth
+    scrolling, and low-contrast decorative gradients were removed; useful comparison, trace,
+    and stage interactions remain. IBM Plex Sans now carries predictor headings. The shared
+    header includes a persisted light/dark theme toggle across all product routes. `npm run
+    lint` and `npm run build` pass; the local predictor and theme control were verified.
+
 *   **Dependency/UI audit, 2026-09-22 (Shubh) — dashboard patched and clean.** Next.js
     moved from `16.2.12` to `16.3.5`, closing the audit's critical RCE findings and
     its transitive `postcss`/`sharp` findings; the lockfile also resolves the remaining
