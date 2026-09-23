@@ -7,15 +7,15 @@ Median APE is one number and it hides three things a budget tool cares about:
 
 1. DIRECTION. Over- and under-prediction are not symmetric. Over-predicting holds
    budget that is released seconds later at CAPTURE — an efficiency cost. Under-
-   predicting lets a request through that should have been blocked — the ceiling
-   leaks. A single |error| statistic scores these identically. They are not.
+   predicting weakens a forecast; reservation misses are measured separately below.
+   A single |error| statistic scores these identically. They are not.
 
 2. MONEY. APE weights every request equally, so a 900% error on a 40-token answer
    counts the same as a 30% error on a 4,000-token one. The second is worth ~30x
    more dollars. What a treasurer needs is error weighted by spend.
 
-3. THE TAIL. The median is by definition blind to the half of the distribution that
-   can actually hurt you. p90 and worst-case are where a ceiling breaks.
+3. THE TAIL. The median is blind to the half of the distribution that can hurt you.
+   p90 forecast error and observed reservation overruns answer different questions.
 
 This prints all of them so the number we quote can be the honest one.
 """
@@ -118,13 +118,39 @@ def main() -> int:
 
     print("\n  How to read this:")
     print("   * median APE      — the headline. Half of requests are better than this.")
-    print("   * p90 APE         — the tail. This is where a ceiling actually breaks.")
+    print("   * p90 APE         — forecast tail error, not reservation coverage.")
     print("   * token-wtd err   — error across the whole BILL. Big requests dominate,")
     print("                       which is right: big requests are the bill.")
     print("   * portfolio bias  — net over/under across all requests. The treasurer's")
     print("                       number: it can be near zero while per-request error")
     print("                       is large, because errors cancel in aggregate.")
     print("   * p95 under gap   — when we under-predict, the bad case, as a % short.")
+
+    # Fit a bucket reservation from older templated calls, then score the newest
+    # quarter. This measures the budget hold, not the forecast reported above.
+    from collections import defaultdict
+    from predictor.refresh import bound_coverage, validated_bounds
+
+    fit_end, validation_end = len(rows) // 2, len(rows) * 3 // 4
+    by_bucket: dict[str, list[int]] = defaultdict(list)
+    for row in rows[:fit_end]:
+        if row.get("finish_reason") == "stop":
+            by_bucket[row["bucket"]].append(row["output_tokens"])
+    validation = [{**row, "bound_is_hard": 0} for row in rows[fit_end:validation_end]
+                  if row.get("finish_reason") == "stop"]
+    approved = validated_bounds(by_bucket, validation)
+    p_bound = Predictor()
+    p_bound.load_bounds(approved)
+    bound_rows = [{"bucket": row["bucket"], "output_tokens": row["output_tokens"],
+                   "bound_is_hard": 0,
+                   "bound_output_tokens": p_bound.predict(row["prompt"], row["model"]).bound_output_tokens}
+                  for row in rows[validation_end:] if row.get("finish_reason") == "stop"]
+    coverage = bound_coverage(bound_rows)
+    assert coverage["bound_sample"] == len(bound_rows)
+    print("\n  Reservation coverage on newer templated calls "
+          f"(learned buckets accepted on the middle slice: {sorted(approved)}):")
+    print(f"   * {coverage['bound_exceeded_pct']}% exceeded the learned/default bound "
+          f"(n={coverage['bound_sample']}); by bucket: {coverage['bound_by_bucket']}")
     return 0
 
 

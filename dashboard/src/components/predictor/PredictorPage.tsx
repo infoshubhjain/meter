@@ -51,7 +51,7 @@ const STAGES: {
     n: "1",
     tag: "Structural override",
     title: "Is the shape of the answer already fixed?",
-    body: "A JSON-schema response is bounded by its own structure. The input term stays in, because pulling entities out of a 10k-token document is not the same size job as describing one user, and a flat constant would repeat the mistake this whole engine exists to fix.",
+    body: "A structured response suggests a shorter answer, but its schema is not a provider-enforced token cap. The input term stays in because extracting fields from a long document differs from describing one user.",
     formula: "scope = 100 + input_tokens x 0.1",
     readout: null,
     note: "not schema-bound",

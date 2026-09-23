@@ -222,10 +222,10 @@ CREATE TABLE IF NOT EXISTS requests (
     -- derived from an already-corrected number divides by the previous factor on
     -- every refresh and oscillates rather than converging.
     predicted_scope_tokens  INTEGER,
-    -- The ceiling. Separate from the prediction because they answer different
-    -- questions: what will this probably cost, versus what can it not exceed.
+    -- Reservation. Separate from the forecast; uncapped bounds are statistical.
     bound_output_tokens     INTEGER,
     bound_cost_usd          double precision,
+    bound_is_hard           INTEGER,
     history_factor          double precision
 );
 
@@ -365,10 +365,10 @@ _ADDED_COLUMNS = (
     # deriving the factor from the already-corrected prediction divides by the
     # previous factor each refresh, which oscillates instead of converging.
     ("requests", "predicted_scope_tokens", "INTEGER"),
-    # What the call could not exceed. Separate from the prediction on purpose --
-    # the ceiling check uses this, so its safety is structural rather than statistical.
+    # Reservation, not necessarily a hard upper bound without an explicit output cap.
     ("requests", "bound_output_tokens", "INTEGER"),
     ("requests", "bound_cost_usd", "double precision"),
+    ("requests", "bound_is_hard", "INTEGER"),
     ("requests", "history_factor", "double precision"),
     # meter.yaml order, recorded explicitly. Under SQLite the dashboard read it off
     # `rowid` — `replace_budgets` clears both tables and re-inserts in file order, so
@@ -661,7 +661,8 @@ _REQUEST_COLUMNS = (
     "pricing_version", "cost_usd", "latency_ms", "ttft_ms", "overhead_ms",
     "status", "is_stream", "estimated", "prompt_hash", "reservation_id",
     "predicted_output_tokens", "predicted_cost_usd", "bucket", "prediction_method",
-    "predicted_scope_tokens", "bound_output_tokens", "bound_cost_usd", "history_factor",
+    "predicted_scope_tokens", "bound_output_tokens", "bound_cost_usd", "bound_is_hard",
+    "history_factor",
 )
 
 # The `NOT NULL DEFAULT` columns of `requests`, and the defaults the schema declares.

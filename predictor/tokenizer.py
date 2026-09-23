@@ -1,7 +1,7 @@
-"""Exact input-token counting.
+"""Local input-token estimates for supported OpenAI-shaped text requests.
 
-Input tokens are *counted*, never predicted -- tiktoken gives the exact number
-OpenAI will bill. Only the output side involves estimation.
+The vocabulary count for a bare string is exact, but provider message framing,
+tool serialization, and multimodal billing are not. Provider usage is authoritative.
 
 Deliberate design choice: this module raises on Anthropic models rather than
 silently approximating them. The reference implementation we evaluated fell back
@@ -12,12 +12,13 @@ quiet inaccuracy in something that gates budget.
 
 from __future__ import annotations
 
+import json
 from functools import lru_cache
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union
 
 import tiktoken
 
-Messages = List[Dict[str, str]]
+Messages = List[Dict[str, Any]]
 
 # Per-message framing overhead in the chat format. Every message costs a few
 # tokens beyond its content (role markers, delimiters), and the reply is primed
@@ -29,6 +30,10 @@ _TOKENS_REPLY_PRIMING = 3
 
 class UnsupportedModelError(ValueError):
     """Raised when a model has no exact tokenizer available locally."""
+
+
+class UnsupportedPayloadError(ValueError):
+    """Raised when a multimodal input cannot be priced with a text tokenizer."""
 
 
 # Model-name prefixes we can count exactly, used only when tiktoken has no exact
@@ -101,7 +106,7 @@ def warm(models: tuple[str, ...] = ("gpt-4o", "gpt-4-turbo")) -> int:
 
 
 def supports(model: str) -> bool:
-    """Whether this model can be counted exactly, without raising."""
+    """Whether this model has a local text tokenizer."""
     try:
         _encoder(model)
         return True
@@ -115,25 +120,41 @@ def count_text(text: str, model: str) -> int:
 
 
 def count_messages(messages: Messages, model: str) -> int:
-    """Exact token count for an OpenAI-style chat payload, including framing."""
+    """Estimate chat tokens, including text blocks and serialized tool calls."""
     enc = _encoder(model)
     total = 0
     for message in messages:
         total += _TOKENS_PER_MESSAGE
         for key, value in message.items():
-            if not isinstance(value, str):
-                continue  # tool_calls and similar structured fields
-            total += len(enc.encode(value))
+            if isinstance(value, str):
+                total += len(enc.encode(value))
+            elif value is None:
+                continue
+            elif key == "content" and isinstance(value, list):
+                if any(not isinstance(part, dict) or part.get("type") not in ("text", "input_text")
+                       for part in value):
+                    raise UnsupportedPayloadError("image/audio content needs provider token counting")
+                total += len(enc.encode(json.dumps(value, ensure_ascii=False, separators=(",", ":"))))
+            elif key in ("tool_calls", "function_call") and isinstance(value, (list, dict)):
+                total += len(enc.encode(json.dumps(value, ensure_ascii=False, separators=(",", ":"))))
+            else:
+                raise UnsupportedPayloadError(f"unsupported message field: {key}")
             if key == "name":
                 total += _TOKENS_PER_NAME
     return total + _TOKENS_REPLY_PRIMING
 
 
-def count(payload: Union[str, Messages], model: str) -> int:
-    """Count either a raw prompt or a messages list."""
+def count(payload: Union[str, Messages], model: str,
+          request_extras: Dict[str, Any] | None = None) -> int:
+    """Estimate text and structured request fields; provider usage remains authoritative."""
     if isinstance(payload, str):
-        return count_text(payload, model)
-    return count_messages(payload, model)
+        base = count_text(payload, model)
+    else:
+        base = count_messages(payload, model)
+    if request_extras:
+        base += count_text(json.dumps(request_extras, ensure_ascii=False,
+                                     separators=(",", ":"), sort_keys=True), model)
+    return base
 
 
 def extract_text(payload: Union[str, Messages]) -> str:

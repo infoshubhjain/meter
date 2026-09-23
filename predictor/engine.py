@@ -5,7 +5,7 @@ Contract for the proxy (ARCHITECTURE.md §2, step 3 ESTIMATE):
     from predictor import predict
     r = predict(messages, model="gpt-4o", payload=body)
     r.predicted_cost_usd   # forecast: dashboard, treasurer runway
-    r.bound_cost_usd       # ceiling check: what this CANNOT exceed
+    r.bound_cost_usd       # budget reservation (hard only with an explicit output cap)
 
 Pipeline:
 
@@ -47,7 +47,7 @@ from proxy.pricing import Usage, price
 from . import buckets, scope as scope_mod, tokenizer
 from .learner import Fit, fit_all
 
-Messages = List[Dict[str, str]]
+Messages = List[Dict[str, Any]]
 Payload = Union[str, Messages]
 
 # Step 4. Default buffer, applied per bucket and replaced by fitted values as the
@@ -55,7 +55,8 @@ Payload = Union[str, Messages]
 # under-prediction was 53% overall but 100% for `code` and 0% for `summary`, so one
 # global constant demonstrably cannot serve every bucket.
 # 1.0, deliberately. The buffer existed to buy safety by over-predicting, but safety
-# now comes from `bound_output_tokens`, which output cannot exceed. Keeping a
+# is represented by a separate reservation; only an explicit output cap makes its
+# output-token bound structural. Keeping a
 # multiplicative buffer on the prediction path double-corrects: the buffer and the
 # history factor are BOTH fitted as actual/scope, so applying both computes
 # scope x (actual/scope) x (actual/scope). A prequential run caught this as median
@@ -108,9 +109,9 @@ JSON_INPUT_RATIO = 0.1
 MIN_PREDICTION = 15
 CACHE_MAX = 10_000
 
-# Fallback ceiling when the caller sets no max_tokens. Conservative on purpose: the
-# bound must never be lower than what the model could actually emit.
-DEFAULT_MODEL_MAX_OUTPUT = 4096
+# Conservative reservation fallback when no provider output cap is supplied.
+# This is not a model maximum; the caller must cap output for a structural bound.
+DEFAULT_FALLBACK_BOUND = 4096
 
 
 @dataclass(frozen=True)
@@ -120,9 +121,8 @@ class PredictionResult:
     `predicted_*` is a forecast: what this will probably cost. It drives the
     dashboard, the Treasurer's time-to-zero projection, and cost-per-outcome.
 
-    `bound_*` is a guarantee: what this cannot exceed. It drives the ceiling check.
-    When max_tokens is set the bound is exact, which makes the ceiling guarantee
-    structural rather than statistical.
+    `bound_*` drives the budget reservation. It is a hard output limit only when
+    max_tokens is set; otherwise the learned p95 fallback is statistical.
     """
 
     input_tokens: int
@@ -136,6 +136,7 @@ class PredictionResult:
     bucket: str
     predicted_cost_usd: float
     bound_cost_usd: float
+    bound_is_hard: bool
     method: str
     model: str
     pricing_version: str
@@ -182,7 +183,7 @@ class Predictor:
     def _cache_key(payload: Payload, model: str, max_tokens: Optional[int],
                    response_format: Optional[str],
                    project: Optional[str], feature: Optional[str],
-                   actor: Optional[str]) -> str:
+                   actor: Optional[str], request_extras: Optional[dict]) -> str:
         """Every input that can change the answer must be in the key.
 
         Attribution belongs here: it selects the history correction factor (step 5),
@@ -194,7 +195,7 @@ class Predictor:
         """
         blob = json.dumps(
             {"p": payload, "m": model, "mt": max_tokens, "rf": response_format,
-             "pr": project, "f": feature, "a": actor},
+             "pr": project, "f": feature, "a": actor, "x": request_extras},
             sort_keys=True, default=str,
         )
         return hashlib.sha256(blob.encode()).hexdigest()
@@ -228,14 +229,15 @@ class Predictor:
         project: Optional[str] = None,
         feature: Optional[str] = None,
         actor: Optional[str] = None,
+        request_extras: Optional[dict] = None,
     ) -> PredictionResult:
         key = self._cache_key(payload, model, max_tokens, response_format,
-                              project, feature, actor)
+                              project, feature, actor, request_extras)
         cached = self._cache_get(key)
         if cached is not None:
             return cached
 
-        input_tokens = tokenizer.count(payload, model)
+        input_tokens = tokenizer.count(payload, model, request_extras)
         text, _ = scope_mod._text_of(payload)
         bucket = buckets.classify(text)
 
@@ -264,9 +266,9 @@ class Predictor:
         # multiplies is exactly what gets written to the ledger.
         scope_tokens = max(1, int(round(raw)))
 
-        # ── 4. SAFETY BUFFER — now applied to the BOUND, not the prediction ─
-        # See DEFAULT_BUFFER. The forecast optimises for accuracy; the ceiling
-        # carries the safety guarantee.
+        # ── 4. SEPARATE FORECAST AND RESERVATION ───────────────────────────
+        # See DEFAULT_BUFFER. The forecast optimises for accuracy; a reservation
+        # may be statistical unless the caller supplies an output cap.
 
         # ── 5. HISTORY CORRECTION ──────────────────────────────────────────
         factor = self._history_factor(project, feature, actor, bucket, model)
@@ -301,6 +303,7 @@ class Predictor:
             bucket=bucket,
             predicted_cost_usd=pred_cost,
             bound_cost_usd=bound_cost,
+            bound_is_hard=bool(max_tokens and max_tokens > 0),
             method=method,
             model=model,
             pricing_version=pricing_version,
@@ -314,19 +317,19 @@ class Predictor:
     # --- learned state -----------------------------------------------------
 
     def _bound_for(self, bucket: str, max_tokens: Optional[int]) -> int:
-        """What this call cannot exceed.
+        """Output reservation: hard with max_tokens, statistical otherwise.
 
         `max_tokens` is exact when the caller sets it. When they do not, falling back
-        to the model's maximum (4096+) would reserve ~$0.04 of gpt-4o output on every
+        to the fixed 4096 fallback would reserve ~$0.04 of gpt-4o output on every
         request and exhaust a small project's ceiling within a couple of dozen calls.
-        A learned per-bucket p95 is a far tighter bound that is still safe in practice;
-        the model maximum remains the last resort.
+        A learned per-bucket p95 is tighter, but tail responses can exceed it;
+        the fixed 4096 fallback is not a verified model maximum either.
         """
         if max_tokens and max_tokens > 0:
             return int(max_tokens)
         with self._lock:
             learned = self._bounds.get(bucket)
-        return int(learned) if learned else DEFAULT_MODEL_MAX_OUTPUT
+        return int(learned) if learned else DEFAULT_FALLBACK_BOUND
 
     def load_bounds(self, observations: Dict[str, List[int]],
                     quantile: float = 0.95) -> Dict[str, int]:

@@ -99,6 +99,26 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
 ## 6a. Current Status
 *(Keep this current — see `AGENTS.md` for the update policy. Update in the same turn as any scope or architecture decision, don't batch it for later.)*
 
+*   **Predictor correctness follow-up, 2026-09-23 (Shubh) — local checks passing; production verification pending.**
+    Multi-turn scope signals now use the latest user request plus standing system/developer
+    constraints rather than stale assistant and user turns. Structured text blocks and tool
+    calls, request-level tool definitions, and response-format schemas contribute to
+    local token estimates; image/audio payloads are explicitly unsupported by the text
+    tokenizer instead of quietly counted as zero. Predictions
+    label explicit output caps as hard *output* bounds and uncapped p95 fallbacks as
+    statistical. The background refresh now reports observed bound exceedance overall
+    and by bucket, separate from median forecast error. A naive older-150/newer-50
+    check on templated calls found 80% overruns when a learned p95 was installed
+    without validation. The new 100/50/50 fit/validation/test gate rejected tighter
+    bounds. Among the 10 final-slice calls that ended naturally (rather than hitting
+    the probe's output cap), the fixed fallback had no overruns. This small sample
+    is not a universal hard guarantee. Public docs and the predictor
+    README have been corrected. `PROPOSALS.md` B23 records the unresolved strict-budget
+    policy and the source-of-truth wording that requires a team decision; no implicit
+    output cap or surprise request rejection was introduced. The Render backend still
+    rejects the Vercel origin on `/judge/session` preflight; Render's effective
+    `CORS_ALLOW_ORIGINS` needs the exact production origin before the public trial works.
+
 *   **Marketing + technical docs refresh, 2026-09-23 (Shubh) — live.** The
     homepage is now an editorial, evidence-led inference-systems surface rather than an
     animation-first landing page: it removes the simulated spend motif, carousel, forced intro,

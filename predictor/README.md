@@ -17,14 +17,15 @@ from predictor import predict
 result = predict(
     payload,                        # str, or OpenAI-style messages list
     model="gpt-4o",
-    max_tokens=body.get("max_tokens"),   # pass it through if the caller set one
+    max_tokens=body.get("max_completion_tokens", body.get("max_tokens")),
 )
 
-result.input_tokens              # int   — exact, from tiktoken
+result.input_tokens              # int   — local text-token estimate; provider usage wins
 result.predicted_output_tokens   # int   — forecast: dashboard, treasurer runway
-result.bound_output_tokens       # int   — what this CANNOT exceed: ceiling check
+result.bound_output_tokens       # int   — output reservation cap or learned fallback
 result.predicted_cost_usd        # float
-result.bound_cost_usd            # float — reserve against THIS for a hard ceiling
+result.bound_cost_usd            # float — reserve against this, not the forecast
+result.bound_is_hard             # bool  — true only with an explicit output cap
 result.bucket                    # str   — "code" | "summary" | ... (log it)
 result.method                    # str   — which rule fired: "sentences", "stacked", ...
 result.tasks                     # tuple — detected tasks, e.g. ("summary", "code")
@@ -32,23 +33,21 @@ result.capped_by_max_tokens      # bool
 result.history_factor            # float — the per-team correction applied
 ```
 
-Three guarantees you can rely on:
+Three properties you can rely on:
 
 | Property | Detail |
 |---|---|
 | **Deterministic** | Identical input always gives an identical number. Never random. |
-| **Two numbers** | `predicted_*` forecasts; `bound_*` is a guarantee. See `DESIGN.md` §1. |
-| **Fast, no I/O** | p50 **0.031ms**, p99 0.041ms. No network, no database. ~0.6% of the 5ms pre-flight budget. |
-| **Biased high** | Aims slightly over, never accurate-on-average. See below. |
+| **Two numbers** | `predicted_*` forecasts; `bound_*` reserves. The uncapped p95 fallback can be exceeded. |
+| **No request-path I/O** | Prediction reads in-memory state, not the network or database. Measure latency on the target host before quoting it. |
+| **Measured separately** | Forecast error and bound exceedance are different metrics. |
 
-### Why biased high
+### Forecast versus reservation
 
-Accuracy here is asymmetric:
-
-- **Under-predict** → a request slips through that should have been blocked → ceiling breached. Bad.
-- **Over-predict** → budget briefly held, released at CAPTURE seconds later. Harmless.
-
-Per-bucket buffer, default 1.30, fitted from data via `load_buffers()`. See `DESIGN.md` §7.
+The forecast is calibrated for typical output length and carries no safety multiplier.
+The reservation uses an explicit output cap when supplied, otherwise a learned per-bucket
+p95 × 1.2. That fallback is a useful hold, not a hard upper bound. The refresh report
+includes `bound_exceeded_pct` so tail misses are visible beside forecast error.
 
 **The predictor never affects billing.** Billing uses the provider's actual usage. This only
 answers *"do we have room for this request?"*
@@ -62,20 +61,20 @@ prior art we evaluated omitted, which left its learning tier permanently dead. W
 predicted_output_tokens, actual_output_tokens, bucket, input_tokens, model
 ```
 
-Then periodically refit from those rows:
+The background refresh refits from those rows off the request path:
 
 ```python
-from predictor import load_fits
-# {bucket: [(input_tokens, actual_output_tokens), ...]}
-load_fits(rows_by_bucket)
+from predictor.refresh import refresh_now
+refresh_now()
 ```
 
-Buckets with fewer than 30 rows keep their priors. `method` flips `"prior"` → `"learned"` when a
-fit takes over — a visible, demoable signal that the predictor learned something.
+Keys with fewer than 20 observations fall back to a coarser history rung or the
+shipped prior. Candidate corrections are checked on newer held-out rows before install.
 
 ## Models
 
-`tiktoken` is **exact for OpenAI** and **wrong for Anthropic** (different tokenizer). This package
+`tiktoken` counts supported OpenAI text with the correct vocabulary, but chat framing,
+tools, and multimodal inputs are not an exact billing count. This package
 therefore **raises `UnsupportedModelError` on Claude** rather than returning a number that is
 quietly ~10-20% off. Guard with `supports(model)` if you need to branch.
 
@@ -99,7 +98,7 @@ has been run.**
 ## Tests
 
 ```bash
-python tests/test_predictor.py      # 64 checks, plain asserts, no framework
+python tests/test_predictor.py      # plain asserts, no framework
 ```
 
 Same convention as `tests/test_proxy.py`. They pin determinism, the `max_tokens` hard cap,

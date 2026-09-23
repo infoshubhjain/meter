@@ -49,7 +49,7 @@ def _rows(db_path: str | None = None) -> List[dict]:
     """
     return pg.fetchall(
         "SELECT project_id, feature, actor, bucket, model, "
-        "       predicted_scope_tokens, output_tokens "
+        "       predicted_scope_tokens, output_tokens, bound_output_tokens, bound_is_hard "
         "FROM requests "
         "WHERE output_tokens > 0 AND predicted_scope_tokens > 0 "
         "ORDER BY ts DESC LIMIT ?", (LOOKBACK,)
@@ -91,6 +91,7 @@ def compute(rows: List[dict]) -> Tuple[Dict[Tuple, Tuple[float, int]],
                 ratios[key].append(ratio)
         if r["bucket"]:
             buffers[r["bucket"]].append((scope, actual))
+        if r["bucket"] and r.get("bound_is_hard") == 0:
             outputs[r["bucket"]].append(actual)
 
     history = {k: (float(np.median(v)), len(v))
@@ -102,6 +103,7 @@ HOLDOUT_FRAC = 0.25
 MIN_ROWS_TO_GATE = 60
 # Held-out rows a single key needs before its factor can be accepted on its own evidence.
 MIN_HOLDOUT_PER_KEY = 5
+MIN_HOLDOUT_PER_BOUND = 20
 
 
 def _key_for(row, factors) -> Tuple | None:
@@ -184,6 +186,41 @@ def _median_err(rows, factors: Dict[Tuple, float]) -> float:
     return float(np.median(errs)) if errs else float("inf")
 
 
+def bound_coverage(rows: List[dict]) -> dict:
+    """Observed reservation misses; median forecast error cannot reveal these."""
+    measured = [r for r in rows if r.get("bound_is_hard") == 0
+                and (r.get("bound_output_tokens") or 0) > 0
+                and (r.get("output_tokens") or 0) > 0]
+    exceeded = sum(r["output_tokens"] > r["bound_output_tokens"] for r in measured)
+    by_bucket: Dict[str, List[dict]] = defaultdict(list)
+    for row in measured:
+        by_bucket[row.get("bucket") or "unknown"].append(row)
+    return {"bound_sample": len(measured),
+            "bound_exceeded_pct": round(100 * exceeded / len(measured), 1) if measured else None,
+            "bound_by_bucket": {
+                bucket: {"sample": len(items), "exceeded_pct": round(
+                    100 * sum(r["output_tokens"] > r["bound_output_tokens"] for r in items)
+                    / len(items), 1)}
+                for bucket, items in sorted(by_bucket.items())}}
+
+
+def validated_bounds(fit_outputs: Dict[str, List[int]], holdout: List[dict]) -> Dict[str, List[int]]:
+    """Only tighten a reservation when recent calls meet its tail-risk target."""
+    import numpy as np
+
+    recent: Dict[str, List[int]] = defaultdict(list)
+    for row in holdout:
+        if (row.get("bound_is_hard") == 0 and row.get("bucket")
+                and (row.get("output_tokens") or 0) > 0):
+            recent[row["bucket"]].append(row["output_tokens"])
+    return {
+        bucket: values for bucket, values in fit_outputs.items()
+        if len(values) >= 20 and len(recent[bucket]) >= MIN_HOLDOUT_PER_BOUND
+        and sum(actual > int(np.quantile(values, .95) * 1.2)
+                for actual in recent[bucket]) / len(recent[bucket]) <= .05
+    }
+
+
 def refresh_now(db_path: str | None = None, gate: bool = True) -> Dict[str, Any]:
     """One pass: read the ledger, recompute, and install ONLY if it helps.
 
@@ -216,8 +253,9 @@ def refresh_now(db_path: str | None = None, gate: bool = True) -> Dict[str, Any]
         history, buffers, outputs = compute(usable)
         installed = engine.load_history(history) if not gate else {}
         engine.load_buffers(buffers)
-        engine.load_bounds(outputs)
+        engine.load_bounds(outputs if not gate else {})
         return {"rows": len(usable), "history_keys": len(installed),
+                **bound_coverage(usable),
                 "gated": False, "reason": "too few rows to gate"}
 
     # `_rows` returns newest-first, so the head is the most recent slice.
@@ -291,10 +329,11 @@ def refresh_now(db_path: str | None = None, gate: bool = True) -> Dict[str, Any]
     before = _median_err(holdout, engine.current_history())
     after = _median_err(holdout, kept)
 
-    # Buffers and bounds feed the BOUND, not the forecast, so they carry no accuracy
-    # risk and are installed unconditionally.
+    # A p95 hold is not guaranteed. Recent tail misses veto a tighter learned bound;
+    # the fixed fallback is safer under drift, though still not a model maximum.
     engine.load_buffers(buffers)
-    engine.load_bounds(outputs)
+    approved_bounds = validated_bounds(outputs, holdout)
+    engine.load_bounds(approved_bounds)
 
     # Install the surviving keys directly. `load_history` would re-shrink values that
     # `shrink_history` already shrank -- and re-shrinking is what silently pulled every
@@ -308,6 +347,8 @@ def refresh_now(db_path: str | None = None, gate: bool = True) -> Dict[str, Any]
                "gated": True,
                "median_before": round(before * 100, 1),
                "median_after": round(after * 100, 1),
+               **bound_coverage(holdout),
+               "approved_bound_buckets": sorted(approved_bounds),
                "verdict": "installed" if kept else "nothing survived",
                "detail": {"/".join(str(x) for x in k): v for k, v in report.items()}}
     log.info("predictor refresh: %s", summary)

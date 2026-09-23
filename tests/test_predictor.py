@@ -97,6 +97,24 @@ def test_input_counting() -> None:
     two = count([{"role": "user", "content": text}, {"role": "assistant", "content": text}], MODEL)
     one = count([{"role": "user", "content": text}], MODEL)
     check("framing is charged per message", two > one + count(text, MODEL))
+    tool_call = [{"role": "assistant", "content": None, "tool_calls": [
+        {"id": "call_1", "type": "function", "function": {"name": "lookup", "arguments": '{"city":"Paris"}'}}
+    ]}]
+    check("tool calls are counted rather than silently skipped",
+          count(tool_call, MODEL) > count([{"role": "assistant", "content": None}], MODEL))
+    text_blocks = [{"role": "user", "content": [{"type": "text", "text": "Explain this"}]}]
+    check("structured text blocks contribute tokens",
+          count(text_blocks, MODEL) > count([{"role": "user", "content": None}], MODEL))
+    check("tool definitions outside messages contribute tokens",
+          count("hi", MODEL, {"tools": [{"type": "function", "function": {"name": "lookup"}}]})
+          > count("hi", MODEL))
+    from predictor.tokenizer import UnsupportedPayloadError
+    try:
+        count([{"role": "user", "content": [{"type": "image_url", "image_url": {"url": "x"}}]}], MODEL)
+        raised = False
+    except UnsupportedPayloadError:
+        raised = True
+    check("images are not assigned fake text-token counts", raised)
 
     # A loud failure beats a silently ~10-20% wrong number in something that gates spend.
     # The reference fell back to cl100k_base for Claude, which is the wrong vocabulary.
@@ -183,8 +201,11 @@ def test_max_tokens() -> None:
     # bound is emitted alongside, and is exact when max_tokens is set
     r3 = predict("hi", MODEL, max_tokens=250)
     check("bound equals max_tokens", r3.bound_output_tokens == 250)
+    check("explicit output cap marks a hard output bound", r3.bound_is_hard)
     check("bound cost >= predicted cost", r3.bound_cost_usd >= r3.predicted_cost_usd)
     check("bound exists without max_tokens", predict("hi", MODEL).bound_output_tokens > 0)
+    check("uncapped fallback is statistical, not a hard guarantee",
+          not predict("hi", MODEL).bound_is_hard)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -230,6 +251,13 @@ def test_scope_signals() -> None:
     from predictor.scope import qualitative_scale
     check("'step by step' is CoT only, not also verbose",
           qualitative_scale("analyze this step by step") == 1.0)
+    old_turn = [{"role": "user", "content": "Write a long essay in 800 words."},
+                {"role": "assistant", "content": "Here is the essay."},
+                {"role": "user", "content": "Reply in one word."}]
+    check("latest user length instruction wins", estimate_scope(old_turn)[0] == 5)
+    standing = [{"role": "system", "content": "Always reply in two sentences."},
+                {"role": "user", "content": "Explain DNS."}]
+    check("system output constraint remains in scope", 40 <= estimate_scope(standing)[0] <= 70)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -307,15 +335,15 @@ def test_buffer_and_history() -> None:
     check("unknown project falls to (bucket, model)", 1.0 < c.history_factor < 2.0,
           f"{c.history_factor:.2f}")
 
-    # Step 6 -- the bound. max_tokens is exact; otherwise a learned per-bucket p95
-    # beats the model maximum, which would reserve ~$0.04 of gpt-4o output on every
+    # Step 6 -- the bound. max_tokens is explicit; otherwise a learned per-bucket p95
+    # beats the fixed fallback, which would reserve ~$0.04 of gpt-4o output on every
     # request and exhaust a small project's ceiling in a couple of dozen calls.
     q = Predictor()
-    check("bound defaults to the model maximum", q.predict("hi", MODEL).bound_output_tokens == 4096)
+    check("bound defaults to the fixed fallback", q.predict("hi", MODEL).bound_output_tokens == 4096)
     q.load_bounds({q.predict("hi", MODEL).bucket: [200] * 25})
-    check("learned bound is tighter than the model maximum",
+    check("learned bound is tighter than the fixed fallback",
           q.predict("hi", MODEL).bound_output_tokens < 4096)
-    check("too few rows keeps the model maximum", q.load_bounds({"code": [200] * 5}) == {})
+    check("too few rows keeps the fixed fallback", q.load_bounds({"code": [200] * 5}) == {})
 
     # scope_tokens is the fixed baseline the learner fits against, so it must be the
     # RAW heuristic -- unmoved by the buffer, the history factor, or the clamp.
@@ -451,6 +479,14 @@ def test_proxy_integration() -> None:
                        "max_tokens": 20}, "gpt-4o", "openai")
     check("max_tokens is honoured through the seam",
           capped is not None and capped.predicted_output_tokens == 20)
+    with_tools = _predict(
+        {"messages": [{"role": "user", "content": "hi"}],
+         "tools": [{"type": "function", "function": {"name": "lookup", "parameters": {"type": "object"}}}]},
+        "gpt-4o", "openai")
+    without_tools = _predict({"messages": [{"role": "user", "content": "hi"}]}, "gpt-4o", "openai")
+    check("request-level tool schema reaches input estimate",
+          with_tools is not None and without_tools is not None
+          and with_tools.input_tokens > without_tools.input_tokens)
     completion_capped = _predict(
         {"messages": [{"role": "user", "content": "Write an essay. " * 50}],
          "max_completion_tokens": 30}, "gpt-4o", "openai")
@@ -495,7 +531,7 @@ def test_ledger_migration() -> None:
     # a column that did not exist yet.
     conn.execute("DROP INDEX IF EXISTS idx_requests_bucket")
     for col in ("predicted_output_tokens", "predicted_cost_usd", "bucket",
-                "prediction_method"):
+                "prediction_method", "bound_is_hard"):
         conn.execute(f"ALTER TABLE requests DROP COLUMN IF EXISTS {col}")
     check("the older ledger lacks the prediction columns", "bucket" not in columns())
 
@@ -504,7 +540,7 @@ def test_ledger_migration() -> None:
 
     cols = columns()
     for col in ("predicted_output_tokens", "predicted_cost_usd", "bucket",
-                "prediction_method"):
+                "prediction_method", "bound_is_hard"):
         check(f"migration added {col}", col in cols)
 
     row = conn.execute("SELECT id, cost_usd FROM requests WHERE id = 'old'").fetchone()
@@ -550,6 +586,22 @@ def test_refresh_gate() -> None:
                  "openai", "/v1/chat/completions", actual, 400))
 
     from predictor import refresh
+
+    coverage = refresh.bound_coverage([
+        {"output_tokens": 100, "bound_output_tokens": 80, "bucket": "code", "bound_is_hard": 0},
+        {"output_tokens": 40, "bound_output_tokens": 80, "bucket": "code", "bound_is_hard": 0},
+        {"output_tokens": 10, "bound_output_tokens": None},
+    ])
+    check("bound exceedance is measured independently of forecast error",
+          coverage["bound_sample"] == 2 and coverage["bound_exceeded_pct"] == 50.0
+          and coverage["bound_by_bucket"]["code"]["exceeded_pct"] == 50.0)
+    fit_outputs = {"code": [100] * 40}
+    stable = [{"bucket": "code", "output_tokens": 100, "bound_is_hard": 0}] * 20
+    shifted = [{"bucket": "code", "output_tokens": 300, "bound_is_hard": 0}] * 20
+    check("stable holdout permits a tighter learned reservation",
+          "code" in refresh.validated_bounds(fit_outputs, stable))
+    check("tail drift keeps the larger fallback reservation",
+          "code" not in refresh.validated_bounds(fit_outputs, shifted))
 
     p = Predictor()
     p._history = {}

@@ -18,9 +18,9 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-Messages = List[Dict[str, str]]
+Messages = List[Dict[str, Any]]
 Payload = Union[str, Messages]
 
 # ---------------------------------------------------------------------------
@@ -233,19 +233,25 @@ def imperative_scale(text: str, cfg: "ScopeConfig" = None) -> float:
 
 
 def _text_of(payload: Payload) -> Tuple[str, str]:
-    """Return (full_conversation_text, last_message_text), both lowercased.
-
-    Keyword detection reads the whole conversation, but the instruction-ratio signal
-    needs the last message alone.
-    """
+    """Use standing system constraints and the latest user request, not stale turns."""
     if isinstance(payload, str):
         return payload.lower(), payload.lower()
-    parts = [
-        m.get("content", "") for m in payload
-        if isinstance(m, dict) and isinstance(m.get("content"), str)
-    ]
-    last = parts[-1] if parts else ""
-    return " ".join(parts).lower(), last.lower()
+    def content(message: dict) -> str:
+        value = message.get("content", "")
+        if isinstance(value, str):
+            return value
+        if isinstance(value, list):
+            return " ".join(part.get("text", "") for part in value
+                            if isinstance(part, dict) and isinstance(part.get("text"), str))
+        return ""
+
+    standing = [content(m) for m in payload
+                if isinstance(m, dict) and m.get("role") in ("system", "developer")]
+    users = [content(m) for m in payload
+             if isinstance(m, dict) and m.get("role") == "user"]
+    last = users[-1] if users else next((content(m) for m in reversed(payload)
+                                        if isinstance(m, dict) and content(m)), "")
+    return " ".join([*standing, last]).lower(), last.lower()
 
 
 def parse_length_instruction(text: str, cfg: "ScopeConfig" = None) -> Optional[Tuple[float, str]]:

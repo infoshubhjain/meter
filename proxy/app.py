@@ -890,11 +890,9 @@ async def _proxy(request: Request, shape: str) -> Response:
     # of concurrent requests cannot each read the same under-ceiling total and all be
     # let through (ARCHITECTURE.md §2). Free when no meter.yaml is configured.
     #
-    # The amount held is `bound_cost_usd`, not the forecast — predictor/DESIGN.md §1
-    # assigns the bound to exactly this check: it is what the call *cannot* exceed, exact
-    # when the caller set max_tokens. Reserving the forecast instead would leak the
-    # ceiling every time the predictor under-predicts (measured at ~half of requests),
-    # while over-holding the bound is transient — released seconds later at CAPTURE.
+    # Hold `bound_cost_usd`, not the forecast. It is an output guarantee only when an
+    # explicit provider output cap is present; the uncapped p95 fallback is statistical.
+    # Reserving the forecast would leak even more often. CAPTURE uses actual usage.
     try:
         budget_decision = await budget.authorize(
             key["project_id"],
@@ -1327,6 +1325,8 @@ def _predict(
             model,
             max_tokens if isinstance(max_tokens, int) else None,
             response_format=response_format,
+            request_extras={k: body[k] for k in ("tools", "functions", "response_format", "tool_choice")
+                            if k in body},
             # Attribution keys the history correction (DESIGN.md §8), which is how the
             # estimator learns a given team's prompting style rather than assuming one
             # global average fits everybody.
@@ -1408,6 +1408,7 @@ def _row(
         # is what the budget check should consult.
         "bound_output_tokens": getattr(prediction, "bound_output_tokens", None),
         "bound_cost_usd": getattr(prediction, "bound_cost_usd", None),
+        "bound_is_hard": int(prediction.bound_is_hard) if prediction is not None else None,
         "history_factor": getattr(prediction, "history_factor", None),
     }
 

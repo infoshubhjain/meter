@@ -14,7 +14,7 @@ another (the one you "fixed" may have been the correct one).
 
 Status key: **OPEN** — needs a decision · **RESOLVED / DONE / SHIPPED** — closed, kept for the record.
 
-40 items: A1–A7 (contradictions), B1–B22 (gaps), C1–C7 (verification), D1–D4 (research findings).
+41 items: A1–A7 (contradictions), B1–B23 (gaps), C1–C7 (verification), D1–D4 (research findings).
 
 ---
 
@@ -888,6 +888,22 @@ URL in `CORS_ALLOW_ORIGINS` still works and is the recommended route.
 ⚠ **Behaviour change:** testing the judge console from a branch preview now requires either
 setting the flag or listing that preview URL explicitly. Worth knowing before someone spends
 an afternoon on a CORS error that is doing its job.
+
+### B23 — "Exact input" and "hard ceiling" need a defined support boundary · **OPEN — found 2026-09-23**
+
+`CONTEXT.md` §5A and `ARCHITECTURE.md` §2 call local `tiktoken` chat counts exact;
+`CONTEXT.md` §6a describes `bound_*` as what a call cannot exceed. The shipped counter
+uses estimated message framing and cannot price image/audio blocks locally. Without an
+explicit output cap, the reservation uses an observed p95 × 1.2, which tail responses
+can exceed. Even with a cap, an input-count error can make the *cost* reservation low.
+The proxy also deliberately continues when prediction is unavailable.
+
+The code and public docs now identify the uncapped reservation as statistical, count
+structured text/tool fields, and report observed bound exceedance. A decision is still
+needed on strict-budget policy: require supported text inputs and provider-enforced
+output caps for ceiling-backed projects (reject unsupported requests), or explicitly
+offer those projects a soft ceiling. Do not silently inject an output cap: that changes
+application responses. Once decided, reconcile the source-of-truth documents together.
 
 ## C. Verification tasks
 Not design questions — things that are written down and might simply be wrong.
