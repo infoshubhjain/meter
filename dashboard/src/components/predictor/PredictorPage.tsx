@@ -698,22 +698,11 @@ export function PredictorPage() {
 
 function Topbar() {
   return (
-    <div className="topbar scrolled">
-      <div className="wrap">
-        <Link href="/" className="mark">
-          <span className="dot" />
-          METER
-        </Link>
-        <nav>
-          <Link href="/" className="glass-pill">
-            Home
-          </Link>
-          <Link href="/dashboard" className="glass-cta">
-            Open dashboard <span className="arr">→</span>
-          </Link>
-        </nav>
-      </div>
-    </div>
+    <header className="site-header">
+      <Link href="/" className="wordmark">METER<span>.</span></Link>
+      <nav><Link href="/docs">Documentation</Link><Link href="/dashboard">Control room</Link></nav>
+      <Link href="/try" className="header-cta">Try the system <span>↗</span></Link>
+    </header>
   );
 }
 

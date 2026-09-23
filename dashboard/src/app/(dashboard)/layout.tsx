@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
-import { Inter, IBM_Plex_Mono, IBM_Plex_Sans_Condensed } from "next/font/google";
-import { Background } from "@/components/Background";
+import { IBM_Plex_Sans, IBM_Plex_Mono, IBM_Plex_Sans_Condensed } from "next/font/google";
 import "../globals.css";
 
 // Inter for everything that is prose or a number. Weights are explicit because the
 // design gets its hierarchy from weight (600 headings against 400 body) rather than
 // from size and tracking — Next only subsets what is asked for, and a missing 600
 // silently synthesises a faux-bold that ruins the type.
-const inter = Inter({
-  variable: "--font-inter",
+const plexSans = IBM_Plex_Sans({
+  variable: "--font-plex-sans",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
 });
@@ -58,12 +57,9 @@ export default function DashboardRootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${plexMono.variable} ${plexCond.variable} antialiased`}
+      className={`${plexSans.variable} ${plexMono.variable} ${plexCond.variable} antialiased`}
     >
       <body className="min-h-screen bg-canvas">
-        {/* The dot texture belongs to the dashboard alone — mounted here rather
-            than app-wide, so the marketing side never inherits it. */}
-        <Background />
         {children}
       </body>
     </html>

@@ -70,9 +70,9 @@ export function TopNav({ breaker }: { breaker: BreakerState }) {
       aria-label="Dashboard sections"
       className="fixed left-0 right-0 top-0 z-[100] border-b border-border-subtle py-[12px]"
       style={{
-        background: "rgba(8,8,12,0.6)",
-        backdropFilter: "blur(12px) saturate(180%)",
-        WebkitBackdropFilter: "blur(12px) saturate(180%)",
+        background: "rgba(241,240,234,0.92)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
       }}
     >
       <div className="mx-auto flex w-full max-w-[1400px] items-center gap-[12px] px-[32px]">
@@ -80,8 +80,7 @@ export function TopNav({ breaker }: { breaker: BreakerState }) {
             full page load by itself, because the two sides are separate root
             layouts — which is exactly what we want, so no stylesheet crosses. */}
         <Link href="/" className="brand-mark">
-          <span className="live-dot h-[6px] w-[6px]" aria-hidden="true" />
-          Meter
+          Meter<span aria-hidden="true">.</span>
         </Link>
 
         {/* Deliberately NOT in LINKS: those are in-page anchors driven by the

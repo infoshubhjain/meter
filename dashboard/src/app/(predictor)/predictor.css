@@ -5,6 +5,24 @@
    3D is CSS preserve-3d, so it degrades to flat under reduced motion.
    =========================================================== */
 
+:root {
+  --bg: #f1f0ea;
+  --bg-2: #e8e7df;
+  --bg-3: #deddd4;
+  --ink: #141413;
+  --ink-2: #4f4f49;
+  --ink-3: #76766e;
+  --ink-4: #9b9a90;
+  --rule: rgba(20,20,19,.16);
+  --rule-strong: rgba(20,20,19,.42);
+  --signal: #141413;
+  --signal-2: #43433d;
+  --gold: #679600;
+  --mint: #3b7657;
+  --mono: var(--font-plex-mono), monospace;
+  --cond: var(--font-plex-cond), sans-serif;
+}
+
 .px {
   --accent: var(--signal);
   --card: rgba(20, 20, 28, 0.6);

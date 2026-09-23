@@ -945,3 +945,53 @@ body {
   white-space: nowrap;
   border-width: 0;
 }
+
+/* Shared editorial shell — every operational route consumes these semantic tokens.
+   Keeping the data components on tokens means the live dashboard, judge console and
+   loading states can share the marketing surface without a second component system. */
+:root {
+  --color-canvas: #f1f0ea;
+  --color-surface-1: #faf9f4;
+  --color-surface-2: #e8e7df;
+  --color-surface-3: #deddd4;
+  --color-surface-4: #c8c7bd;
+  --color-border-subtle: rgba(20, 20, 19, 0.16);
+  --color-border-hover: rgba(20, 20, 19, 0.42);
+  --color-text-primary: #141413;
+  --color-text-secondary: #4f4f49;
+  --color-text-tertiary: #76766e;
+  --color-rule-ink: #b7b6ad;
+  --color-status-good: #3b7657;
+  --color-status-warn: #9a6900;
+  --color-status-bad: #b13d32;
+  --color-accent: #141413;
+  --color-accent-light: #679600;
+  --color-accent-dim: rgba(217, 255, 74, 0.55);
+  --color-paper: #f1f0ea;
+  --color-ash: #4f4f49;
+  --color-fog: #76766e;
+  --color-obsidian: #141413;
+  --color-carbon: #faf9f4;
+  --color-graphite: #e8e7df;
+  --color-iron: #deddd4;
+  --color-steel: #c8c7bd;
+  --color-signal-blue: #141413;
+  --color-smoke: #4f4f49;
+  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
+}
+
+.glass, .surface-card, .surface-panel { background: var(--color-surface-1); border-radius: 0; box-shadow: none; backdrop-filter: none; }
+.panel::before { background: var(--color-accent-light); opacity: .55; }
+.panel-header { background: transparent; padding: 16px 20px; }
+.panel-tag { border-radius: 0; color: var(--color-text-secondary); }
+.glass-pill, .glass-cta, .brand-mark { background: transparent; border: 0; box-shadow: none; border-radius: 0; color: var(--color-text-secondary); padding: 5px 7px; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.brand-mark { color: var(--color-text-primary); font-size: 13px; padding-left: 0; }
+.brand-mark span { color: #679600; }
+.glass-pill:hover, .glass-cta:hover, .brand-mark:hover { color: var(--color-text-primary); box-shadow: none; transform: none; }
+.glass-pill-active { color: var(--color-text-primary); background: var(--color-accent-dim); }
+.t-display { font-size: clamp(2.8rem, 6vw, 5rem); text-transform: uppercase; letter-spacing: -.045em; }
+.t-metric { font-family: var(--font-cond); font-size: clamp(2.1rem, 3vw, 3.2rem); letter-spacing: -.04em; }
+.judge-btn, .judge-cta { background: var(--color-text-primary); color: var(--color-canvas); border-radius: 0; box-shadow: none; }
+.judge-btn-quiet, .judge-input { background: transparent; border-radius: 0; color: var(--color-text-primary); }
+.judge-input::placeholder { color: var(--color-text-tertiary); }
+.bg-network, .bg-dots, .bg-vignette { display: none; }
