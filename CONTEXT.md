@@ -99,6 +99,16 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
 ## 6a. Current Status
 *(Keep this current — see `AGENTS.md` for the update policy. Update in the same turn as any scope or architecture decision, don't batch it for later.)*
 
+*   **Marketing + technical docs refresh, 2026-09-23 (Shubh) — ready to deploy.** The
+    homepage is now an editorial, evidence-led inference-systems surface rather than an
+    animation-first landing page: it removes the simulated spend motif, carousel, forced intro,
+    and unsupported marketing claims; it adds direct paths to the Control Room, guided trial,
+    and technical documentation. New static **`/docs`** covers quickstart, request lifecycle,
+    configuration, API routes, and the split Vercel/Render deployment model. Dashboard navigation
+    now includes a Docs link. No dependency was added. `npm run lint` and `npm run build` pass;
+    desktop visual QA passed locally. The Vercel production deployment remains on the prior
+    revision until this change is committed and deployed.
+
 *   **Dependency/UI audit, 2026-09-22 (Shubh) — dashboard patched and clean.** Next.js
     moved from `16.2.12` to `16.3.5`, closing the audit's critical RCE findings and
     its transitive `postcss`/`sharp` findings; the lockfile also resolves the remaining
@@ -191,13 +201,18 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
     per monthly cycle**. Vercel also needs `NEXT_PUBLIC_METER_PROXY_URL`, and the proxy
     needs `CORS_ALLOW_ORIGINS` to name the dashboard if its URL changes.
 
-*   **Deployment: LIVE** (Ammar, 2026-08-02). Backend **https://meter-proxy.onrender.com**
-    (Render free, Singapore, Docker), dashboard **https://meter-three-beta.vercel.app**,
+*   **Deployment: LIVE** (Shubh, 2026-09-23). Backend **https://meter-proxy.onrender.com**
+    (Render free, Singapore, Docker), dashboard **https://meter-five-nu.vercel.app**,
     ledger on **Supabase** ap-south-1. **Render, not Fly.io** — Fly now requires a card and
     the goal was zero spend; Render's free web service takes the existing Dockerfile as-is.
     Three hosts, not two, for the reason DEPLOY.md gives: **Vercel cannot run the
     Treasurer/refresh/soft-budget loops**, which are lifespan `asyncio` tasks, and serverless
     functions do not outlive a request. Render runs them.
+    The Vercel project now correctly uses `dashboard/` as its root with the Next.js preset,
+    and `NEXT_PUBLIC_METER_PROXY_URL=https://meter-proxy.onrender.com` is set for Production.
+    Its homepage and `/dashboard` route are live. The dashboard currently reports no reachable
+    ledger, while Render `/healthz` is healthy, so verify Vercel's `DATABASE_URL` is the
+    Supabase **transaction** pooler for the same database before presenting live ledger data.
     *   **Cold start is handled, not eliminated.** A free service sleeps after ~15 min idle
         and pays 30–60s waking. **UptimeRobot** pings `/healthz` every 5 min, which keeps it
         warm — measured 300 ms. Judges must not meet a 60-second first request.

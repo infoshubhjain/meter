@@ -93,6 +93,9 @@ export function TopNav({ breaker }: { breaker: BreakerState }) {
         <Link href="/how-it-works" className="glass-pill dashboard-predictor-link">
           How the predictor works
         </Link>
+        <Link href="/docs" className="glass-pill dashboard-predictor-link">
+          Docs
+        </Link>
 
         {/* Hidden below 1024px — a hamburger is out of scope, and seven cramped
             links are worse than none on a small screen. */}
