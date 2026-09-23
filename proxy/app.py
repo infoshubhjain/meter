@@ -1317,7 +1317,7 @@ def _predict(
             if not isinstance(prompt, str):
                 return None
             payload = prompt
-        max_tokens = body.get("max_tokens")
+        max_tokens = body.get("max_completion_tokens", body.get("max_tokens"))
         response_format = None
         rf = body.get("response_format")
         if isinstance(rf, dict):

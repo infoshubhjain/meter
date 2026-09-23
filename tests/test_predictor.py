@@ -451,6 +451,11 @@ def test_proxy_integration() -> None:
                        "max_tokens": 20}, "gpt-4o", "openai")
     check("max_tokens is honoured through the seam",
           capped is not None and capped.predicted_output_tokens == 20)
+    completion_capped = _predict(
+        {"messages": [{"role": "user", "content": "Write an essay. " * 50}],
+         "max_completion_tokens": 30}, "gpt-4o", "openai")
+    check("max_completion_tokens is honoured through the seam",
+          completion_capped is not None and completion_capped.bound_output_tokens == 30)
 
     # The ledger must be able to store every field the seam produces.
     from proxy.db import _REQUEST_COLUMNS

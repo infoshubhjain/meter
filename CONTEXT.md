@@ -148,6 +148,10 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
     session form reproduced the blocked request; the backend preflight returns HTTP 400
     `Disallowed CORS origin`. Vercel's `DATABASE_URL` remains unverified, so session
     creation and live ledger visibility require separate checks.
+    The proxy now also recognizes OpenAI's `max_completion_tokens` at the prediction
+    seam, so that explicit output cap reaches the budget reservation. The matching
+    predictor and proxy self-checks pass against a disposable local Postgres database
+    (141 and 306 assertions); no demo data was touched.
 
 *   **Dependency/UI audit, 2026-09-22 (Shubh) — dashboard patched and clean.** Next.js
     moved from `16.2.12` to `16.3.5`, closing the audit's critical RCE findings and
