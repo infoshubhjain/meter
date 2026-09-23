@@ -109,15 +109,15 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
     desktop visual QA passed locally. Vercel production deployed commit `f2e47cc`; the public
     homepage and **https://meter-five-nu.vercel.app/docs** were verified after launch.
 
-*   **Unified product-surface visual system, 2026-09-23 (Shubh) — locally verified,
-    awaiting deployment.** The public homepage, technical docs, predictor explainer, live
+*   **Unified product-surface visual system, 2026-09-23 (Shubh) — production live.** The public homepage, technical docs, predictor explainer, live
     Control Room, loading states, and judge/trial controls now share one editorial paper/ink/
     chartreuse system, IBM Plex typography, and a common navigation language. The dashboard
     retains its real data components, status semantics, safety controls, and session isolation;
     only its shared visual shell changed. The old dark network background and glass treatment are
     removed from the dashboard in favor of high-contrast ruled panels that match the public site.
     `npm run lint` and `npm run build` pass; desktop visual QA passed for `/dashboard` and
-    `/how-it-works`. Deploy this revision after review.
+    `/how-it-works`. Vercel production deployed commit `fc1b129`; the live Control Room was
+    verified after launch.
 
 *   **Dependency/UI audit, 2026-09-22 (Shubh) — dashboard patched and clean.** Next.js
     moved from `16.2.12` to `16.3.5`, closing the audit's critical RCE findings and
