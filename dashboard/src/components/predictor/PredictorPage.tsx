@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import { TopNav } from "@/components/TopNav";
 import Lenis from "lenis";
 import { gsap } from "gsap";
 
@@ -303,7 +304,7 @@ export function PredictorPage() {
 
   return (
     <div className="px" ref={rootRef}>
-      <Topbar />
+      <TopNav />
 
       {/* ── HERO ─────────────────────────────────────────────── */}
       <section
@@ -695,16 +696,6 @@ export function PredictorPage() {
 }
 
 /* ─────────────────────────────────────────────────────────── */
-
-function Topbar() {
-  return (
-    <header className="site-header">
-      <Link href="/" className="wordmark">METER<span>.</span></Link>
-      <nav><Link href="/docs">Documentation</Link><Link href="/dashboard">Control room</Link></nav>
-      <Link href="/try" className="header-cta">Try the system <span>↗</span></Link>
-    </header>
-  );
-}
 
 /** ARCHITECTURE.md §2, with step 3 called out as the one this page is about. */
 function Lifecycle() {

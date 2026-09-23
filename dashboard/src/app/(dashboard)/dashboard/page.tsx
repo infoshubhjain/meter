@@ -1,4 +1,4 @@
-import { TopNav } from "@/components/TopNav";
+import { DashboardJumpNav, TopNav } from "@/components/TopNav";
 import { SpendHero } from "@/components/SpendHero";
 import { TeamSpendTable } from "@/components/TeamSpendTable";
 import { TeamBudgetCard } from "@/components/TeamBudgetCard";
@@ -60,12 +60,12 @@ export default async function Home() {
 
   return (
     <>
-      <TopNav breaker={breaker} />
+      <TopNav />
 
       {/* z-10 puts the content plane above all three fixed background layers. */}
       <main
         id="top"
-        className="relative z-10 mx-auto w-full max-w-[1400px] px-[32px] pb-[60px] pt-[100px]"
+        className="relative z-10 mx-auto w-full max-w-[1400px] px-[32px] pb-[60px] pt-[48px]"
       >
         {/* The page title. Condensed and large, with the deployment it is reading
             from stated underneath — on a screen showing live money, "which
@@ -82,6 +82,7 @@ export default async function Home() {
               to find. */}
           <TryItYourself />
         </div>
+        <DashboardJumpNav breaker={breaker} />
 
         {!ledgerAvailable && (
           <div className="glass mb-[20px] p-[20px]">

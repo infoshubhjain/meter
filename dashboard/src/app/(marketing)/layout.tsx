@@ -5,6 +5,7 @@ import {
   IBM_Plex_Sans_Condensed,
 } from "next/font/google";
 import "./marketing.css";
+import "../product.css";
 
 // Self-hosted through next/font rather than the design's <link> to Google Fonts:
 // the link version blocks first paint on a third-party round trip, and this page
@@ -35,10 +36,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * Root layout for the marketing surface — its own <html>/<body>, its own fonts,
- * its own stylesheet. The dashboard has a separate root layout and shares nothing
- * with this one, which is what lets the homepage be expressive without any of it
- * reaching an operations screen someone watches while production is live.
+ * Root layout for the public surface — its own fonts and page stylesheet.
  */
 export default function MarketingRootLayout({
   children,
@@ -50,9 +48,7 @@ export default function MarketingRootLayout({
       lang="en"
       className={`${plexSans.variable} ${plexMono.variable} ${plexCond.variable}`}
     >
-      {/* `no-scroll` is removed by the intro once it finishes; without it the page
-          can be scrolled behind the overlay before the sequence has played. */}
-      <body className="no-scroll">{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

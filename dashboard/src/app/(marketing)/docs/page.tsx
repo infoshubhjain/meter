@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { TopNav } from "@/components/TopNav";
 
 const configuration = [
   ["DATABASE_URL", "Required Postgres connection. Use the session pooler for the proxy and the transaction pooler for the Vercel dashboard."],
@@ -12,8 +12,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
 }
 
 export default function DocsPage() {
-  return <main>
-    <header className="site-header"><Link href="/" className="wordmark">METER<span>.</span></Link><nav><Link href="/">Overview</Link><Link href="/dashboard">Control room</Link></nav><Link href="/try" className="header-cta">Try the system <span>↗</span></Link></header>
+  return <><TopNav /><main>
     <div className="docs-shell">
       <section className="docs-hero"><div><p className="eyebrow">METER / TECHNICAL DOCUMENTATION</p><h1>Operate<br />inference.</h1><p>Meter is a FastAPI proxy and ledger for measuring, controlling, and safely replenishing model-provider spend. This is the implementation guide, not marketing copy.</p></div><nav className="docs-toc" aria-label="Documentation sections"><a href="#quickstart">01 / Quickstart</a><a href="#lifecycle">02 / Request lifecycle</a><a href="#configuration">03 / Configuration</a><a href="#api">04 / API reference</a><a href="#deployment">05 / Deployment</a></nav></section>
       <div className="docs-content"><aside className="docs-aside">ON THIS PAGE<a href="#quickstart">Quickstart</a><a href="#lifecycle">Lifecycle</a><a href="#configuration">Configuration</a><a href="#api">API reference</a><a href="#deployment">Deployment</a></aside><div>
@@ -24,5 +23,5 @@ export default function DocsPage() {
         <Section id="deployment" title="Deployment"><p>Deploy the dashboard on Vercel and the proxy on a long-lived host such as Render. The proxy owns background Treasurer and refresh loops, so it must not run as a serverless function. Use a single proxy instance: reservation serialization is in-process until a shared reservation store is introduced.</p><pre>{`Dashboard (Vercel)     DATABASE_URL = Supabase transaction pooler\nProxy (Render)         DATABASE_URL = Supabase session pooler\n\nKeep TREASURER_DRY_RUN=true unless a monitored, deliberate sandbox charge is required.`}</pre></Section>
       </div></div>
     </div>
-  </main>;
+  </main></>;
 }

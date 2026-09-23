@@ -6,6 +6,7 @@ import {
 } from "next/font/google";
 import "../(marketing)/marketing.css";
 import "./predictor.css";
+import "../product.css";
 
 // Same self-hosted fonts and design system as the marketing surface, so this page
 // reads as part of the same product. It gets its own root layout (like the

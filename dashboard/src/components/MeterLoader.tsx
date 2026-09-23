@@ -32,7 +32,7 @@ export function MeterLoader({
   note?: string;
 }) {
   return (
-    <main className="relative z-10 mx-auto w-full max-w-[1400px] px-[32px] pb-[60px] pt-[100px]">
+    <><TopNav /><main className="relative z-10 mx-auto w-full max-w-[1400px] px-[32px] pb-[60px] pt-[48px]">
       <div className="mb-[32px]">
         <h1 className="t-display">{title}</h1>
         <div className="t-eyebrow mt-[8px]">Measuring…</div>
@@ -78,6 +78,7 @@ export function MeterLoader({
           {note}
         </p>
       </div>
-    </main>
+    </main></>
   );
 }
+import { TopNav } from "@/components/TopNav";

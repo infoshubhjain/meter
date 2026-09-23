@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TopNav } from "@/components/TopNav";
 
 const evidence = [
   ["01", "Pre-flight control", "Estimate cost before a request reaches a model. Reserve budget before a concurrent workload can overspend it."],
@@ -7,8 +8,7 @@ const evidence = [
 ];
 
 export function Home() {
-  return <main>
-    <header className="site-header"><Link href="/" className="wordmark" aria-label="Meter home">METER<span>.</span></Link><nav aria-label="Primary navigation"><a href="#system">System</a><a href="#principles">Principles</a><Link href="/docs">Documentation</Link></nav><Link href="/dashboard" className="header-cta">Open control room <span>↗</span></Link></header>
+  return <><TopNav /><main>
     <section className="lab-hero" id="top">
       <div className="hero-kicker"><span /> INFERENCE SYSTEMS / 01</div>
       <div className="hero-copy"><p className="eyebrow">Meter is an inference control plane.</p><h1>Know the cost<br />before the call.</h1><p className="hero-lede">A financial operating layer for AI systems: measure every request, enforce the limits you set, and protect production when usage changes shape.</p><div className="hero-actions"><Link href="/docs" className="button button-primary">Read the technical brief <span>→</span></Link><Link href="/try" className="button button-secondary">Try the system</Link></div></div>
@@ -20,5 +20,5 @@ export function Home() {
     <section className="technical-callout"><div><p className="section-index">TECHNICAL BRIEF / 03</p><h2>Designed for the difficult parts of inference operations.</h2></div><ul><li><b>Reserve / capture</b><span>keeps ceilings meaningful under concurrency.</span></li><li><b>Streaming-aware accounting</b><span>captures usage without buffering the client response.</span></li><li><b>Versioned pricing</b><span>keeps historical cost rows reproducible.</span></li><li><b>Safety rails</b><span>bound every autonomous treasury decision.</span></li></ul><Link href="/docs" className="text-link">Explore architecture, API reference, configuration, and deployment <span>→</span></Link></section>
     <section className="closing"><p className="eyebrow">METER / INFERENCE SYSTEMS</p><h2>Make inference<br />operable.</h2><Link href="/dashboard" className="button button-primary">Open control room <span>→</span></Link></section>
     <footer><span>METER</span><span>Inference systems for teams that need a number they can act on.</span><Link href="/docs">Docs</Link></footer>
-  </main>;
+  </main></>;
 }

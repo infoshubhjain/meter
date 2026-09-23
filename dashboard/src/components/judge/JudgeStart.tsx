@@ -12,6 +12,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { JudgeError, judge, rememberToken } from "@/lib/judge";
 import { Panel } from "@/components/ui/primitives";
+import { TopNav } from "@/components/TopNav";
 
 export function JudgeStart() {
   const router = useRouter();
@@ -45,7 +46,7 @@ export function JudgeStart() {
   }
 
   return (
-    <main className="relative z-10 mx-auto w-full max-w-[760px] px-[32px] pb-[60px] pt-[100px]">
+    <><TopNav /><main className="relative z-10 mx-auto w-full max-w-[760px] px-[32px] pb-[60px] pt-[48px]">
       <h1 className="t-display">Try it yourself</h1>
       <div className="t-eyebrow mb-[32px] mt-[8px]">
         Your own session · about 10 minutes · nothing to install
@@ -121,7 +122,7 @@ export function JudgeStart() {
           </p>
         </form>
       </Panel>
-    </main>
+    </main></>
   );
 }
 

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { TopNav } from "@/components/TopNav";
+import { DashboardJumpNav, TopNav } from "@/components/TopNav";
 import { SpendHero } from "@/components/SpendHero";
 import { TeamSpendTable } from "@/components/TeamSpendTable";
 import { TeamBudgetCard } from "@/components/TeamBudgetCard";
@@ -78,11 +78,11 @@ export default async function TryPage() {
 
   return (
     <>
-      <TopNav breaker={breaker} />
+      <TopNav />
 
       <main
         id="top"
-        className="relative z-10 mx-auto w-full max-w-[1400px] px-[32px] pb-[60px] pt-[100px]"
+        className="relative z-10 mx-auto w-full max-w-[1400px] px-[32px] pb-[60px] pt-[48px]"
       >
         <div className="mb-[32px] flex flex-wrap items-end justify-between gap-[20px]">
           <div>
@@ -93,6 +93,7 @@ export default async function TryPage() {
             </div>
           </div>
         </div>
+        <DashboardJumpNav breaker={breaker} />
 
         {/* An empty Control Room is the correct initial state and looks exactly like a
             broken one. A judge who lands here with no context has to be told, before

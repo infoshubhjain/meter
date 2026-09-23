@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono, IBM_Plex_Sans_Condensed } from "next/font/google";
 import "../globals.css";
+import "../product.css";
 
 // Inter for everything that is prose or a number. Weights are explicit because the
 // design gets its hierarchy from weight (600 headings against 400 body) rather than
