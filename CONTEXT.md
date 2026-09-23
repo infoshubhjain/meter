@@ -144,8 +144,10 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
     dark public-page contrast have been revised. Live preflight showed Render rejecting
     `https://meter-five-nu.vercel.app` as a CORS origin; the source default and example
     now name the actual production URL. The Render service environment must also be
-    checked for a stale `CORS_ALLOW_ORIGINS` override. Vercel's `DATABASE_URL` remains
-    unverified, so session creation and live ledger visibility require separate checks.
+    checked for a stale `CORS_ALLOW_ORIGINS` override. A production browser test of the
+    session form reproduced the blocked request; the backend preflight returns HTTP 400
+    `Disallowed CORS origin`. Vercel's `DATABASE_URL` remains unverified, so session
+    creation and live ledger visibility require separate checks.
 
 *   **Dependency/UI audit, 2026-09-22 (Shubh) — dashboard patched and clean.** Next.js
     moved from `16.2.12` to `16.3.5`, closing the audit's critical RCE findings and

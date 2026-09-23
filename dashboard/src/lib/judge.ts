@@ -147,7 +147,7 @@ async function call<T>(
     // "Failed to fetch" sends someone looking at their own browser.
     throw new JudgeError(
       0,
-      `Could not reach the Meter API at ${PROXY_URL}. It may be waking up — try again in a moment.`,
+      `Could not connect to the Meter API at ${PROXY_URL}. It may be waking up, or this site's origin may not be allowed.`,
     );
   }
 

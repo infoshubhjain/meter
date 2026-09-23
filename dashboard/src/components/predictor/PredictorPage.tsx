@@ -330,9 +330,9 @@ export function PredictorPage() {
         <Lifecycle />
         <div className="px-archnote reveal">
           <div>
-            <span className="px-archnote-k">The forecast is not decoration.</span>
+            <span className="px-archnote-k">The reservation happens first.</span>
             <p>
-              Step 4 reserves real budget against it before the call goes out.
+              Step 4 reserves budget against the bound before the call goes out.
               Reserving after the fact is the bug: a thousand simultaneous
               requests all read the same healthy balance and all proceed.
             </p>
@@ -415,8 +415,8 @@ export function PredictorPage() {
             The forecast used to carry a 1.30 safety buffer. It was removed on
             purpose. The buffer and the history factor are both fitted as actual
             over scope, so applying both computed the correction twice and median
-            error <b>rose from 77% to 204%</b> as the loop learned. Safety now
-            lives entirely in the bound, where it cannot corrupt the forecast.
+            error <b>rose from 77% to 204%</b> as the loop learned. The budget
+            reservation uses a separate bound, leaving the forecast calibrated.
           </p>
         </div>
       </section>
