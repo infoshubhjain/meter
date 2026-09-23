@@ -99,15 +99,15 @@ The estimator is **one design with three parts**, not competing options (ARCHITE
 ## 6a. Current Status
 *(Keep this current — see `AGENTS.md` for the update policy. Update in the same turn as any scope or architecture decision, don't batch it for later.)*
 
-*   **Marketing + technical docs refresh, 2026-09-23 (Shubh) — ready to deploy.** The
+*   **Marketing + technical docs refresh, 2026-09-23 (Shubh) — live.** The
     homepage is now an editorial, evidence-led inference-systems surface rather than an
     animation-first landing page: it removes the simulated spend motif, carousel, forced intro,
     and unsupported marketing claims; it adds direct paths to the Control Room, guided trial,
     and technical documentation. New static **`/docs`** covers quickstart, request lifecycle,
     configuration, API routes, and the split Vercel/Render deployment model. Dashboard navigation
     now includes a Docs link. No dependency was added. `npm run lint` and `npm run build` pass;
-    desktop visual QA passed locally. The Vercel production deployment remains on the prior
-    revision until this change is committed and deployed.
+    desktop visual QA passed locally. Vercel production deployed commit `f2e47cc`; the public
+    homepage and **https://meter-five-nu.vercel.app/docs** were verified after launch.
 
 *   **Dependency/UI audit, 2026-09-22 (Shubh) — dashboard patched and clean.** Next.js
     moved from `16.2.12` to `16.3.5`, closing the audit's critical RCE findings and
